@@ -21,10 +21,10 @@ urlpatterns = [
 ]
 
 # Serve media files in development
-if settings.DEBUG:
+'''if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-    path('', include('customer.urls')),
+    path('', include('user.urls')),
     # Admin Dashboard
     #path('', views.admin_dashboard, name='admin_dashboard'),
     path('dashboard/', views.admin_dashboard, name='admin_dashboard_alt'),
@@ -45,8 +45,8 @@ if settings.DEBUG:
     path('products/', views.manage_products, name='manage_products'),
     path('products/<int:product_id>/', views.product_detail, name='product_detail'),
     path('products/<int:product_id>/block/', views.block_product, name='block_product'),
-    path('products/<int:product_id>/unblock/', views.unblock_product, name='unblock_product'),
-]
+    path('products/<int:product_id>/unblock/', views.unblock_product, name='unblock_product'),'''
+
 
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
