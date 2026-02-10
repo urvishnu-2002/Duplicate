@@ -41,16 +41,14 @@ INSTALLED_APPS = [
 
     'rest_framework.authtoken',
     'corsheaders',
-    # 'vendor',
-    # 'admin.apps.AdminConfig',
-    # 'superAdmin',
+    'vendor',
+    'superAdmin',
     'user',
-    # 'deliveryAgent',
-
-    'customer',
+    'deliveryAgent',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -131,7 +129,7 @@ STATIC_URL = 'static/'
 APPEND_SLASH = False
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
@@ -162,15 +160,14 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+]
 
-    ),
-}
 
 # Custom User Model
-AUTH_USER_MODEL = 'customer.AuthUser'
+# AUTH_USER_MODEL = 'customer.AuthUser'
 
 
-AUTH_USER_MODEL = 'myapp.Agent'
+# AUTH_USER_MODEL = 'myapp.Agent'
 
 # Redirect URLs
 LOGIN_URL = 'agentPortal'

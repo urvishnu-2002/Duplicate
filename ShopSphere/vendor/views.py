@@ -5,68 +5,116 @@ import random
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
+User = get_user_model()
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from .models import VendorProfile, Product
+from django.db import transaction
 
 
 # ============================================================================
 # AUTHENTICATION VIEWS - VENDOR REGISTRATION AND LOGIN
 # ============================================================================
 
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def register_view(request):
-    """Vendor registration - creates user account and sends OTP"""
-    if request.method == "POST":
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password') 
+    """Vendor registration - handles both traditional form and JSON API"""
+    if request.method == "GET":
+        return render(request, 'ecommapp/register.html')
 
-        # Validation
-        if password != confirm_password:
-            return render(request, 'ecommapp/register.html', {
-                'error': 'Passwords do not match'
-            })
+    # Detect if it's a JSON request (from frontend)
+    is_json = 'application/json' in request.headers.get('Accept', '') or \
+              'application/json' in request.headers.get('Content-Type', '')
 
-        if User.objects.filter(username=username).exists():
-            return render(request, 'ecommapp/register.html', {
-                'error': 'Username already exists'
-            })
+    # Use request.data for DRF/JSON, or request.POST for traditional forms
+    data = request.data if is_json else request.POST
+    
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
-        if User.objects.filter(email=email).exists():
-            return render(request, 'ecommapp/register.html', {
-                'error': 'Email already exists'
-            })
-
-        # Generate OTP
-        otp = random.randint(100000, 999999)
-
-        # Store in session
-        request.session['reg_data'] = {
-            'username': username,
-            'email': email,
-            'password': password,
-            'otp': otp
-        }
-
-        # Send OTP email
-        try:
-            send_mail(
-                subject="Your Vendor OTP",
-                message=f"Your OTP for registration is: {otp}\n\nDo not share this OTP with anyone.",
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[email],
+    user = None
+    if request.user.is_authenticated:
+        user = request.user
+    elif username and email and password:
+        # Detect if user already exists
+        user = User.objects.filter(email=email).first() or User.objects.filter(username=username).first()
+        if not user:
+            # Create the user if doesn't exist
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password
             )
+            print(f"DEBUG: Created new user {user.email} for vendor registration.")
+    else:
+        if is_json:
+            return Response({'error': 'Username, email, and password are required for new users'}, status=400)
+        return render(request, 'ecommapp/register.html', {'error': 'Required fields missing'})
+
+    # If it's the NEW full registration flow from BankDetails.jsx
+    if is_json and data.get('bank_account_number'):
+        try:
+            with transaction.atomic():
+                # If user exists, check if they already have a vendor profile
+                if VendorProfile.objects.filter(user=user).exists():
+                    return Response({'error': 'You already have a vendor profile or a pending request.'}, status=400)
+                
+                print(f"DEBUG: Using user {user.email}. Converting to vendor request.")
+                
+                # Create the vendor profile with all registration data
+                VendorProfile.objects.create(
+                    user=user,
+                    shop_name=data.get('shop_name', data.get('storeName', '')),
+                    shop_description=data.get('shop_description', data.get('shopDescription', '')),
+                    address=data.get('address', data.get('shippingAddress', '')),
+                    business_type=data.get('business_type', data.get('businessType', 'retail')),
+                    gst_number=data.get('gst_number', data.get('gstNumber', '')),
+                    pan_number=data.get('pan_number', data.get('panNumber', '')),
+                    pan_name=data.get('pan_name', data.get('panName', '')),
+                    id_type=data.get('id_type', data.get('idType', 'gst')),
+                    id_number=data.get('id_number', data.get('idNumber', '')),
+                    bank_holder_name=data.get('bank_holder_name', ''),
+                    bank_account_number=data.get('bank_account_number', ''),
+                    bank_ifsc_code=data.get('bank_ifsc_code', ''),
+                    shipping_fee=data.get('shipping_fee') if data.get('shipping_fee') else 0.00,
+                    approval_status='pending'
+                )
+                
+                print(f"DEBUG: Vendor details for {user.username} sent to Admin for approval.")
+                return Response({'success': True, 'message': 'Registration submitted! Details have been sent to the Admin for approval.'}, status=201)
         except Exception as e:
-            return render(request, 'ecommapp/register.html', {
-                'error': f'Error sending OTP: {str(e)}'
-            })
+            print(f"DEBUG: Error during vendor registration: {str(e)}")
+            return Response({'error': str(e)}, status=500)
 
-        return redirect('verify_otp')
+    # LEGACY / OTP FLOW
+    otp = random.randint(100000, 999999)
+    request.session['reg_data'] = {
+        'username': username,
+        'email': email,
+        'password': password,
+        'otp': otp
+    }
 
-    return render(request, 'ecommapp/register.html')
+    try:
+        send_mail(
+            subject="Your Vendor OTP",
+            message=f"Your OTP for registration is: {otp}\n\nDo not share this OTP with anyone.",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[email],
+        )
+    except Exception as e:
+        if is_json: return Response({'error': f'Error sending OTP: {str(e)}'}, status=500)
+        return render(request, 'ecommapp/register.html', {'error': f'Error sending OTP: {str(e)}'})
+
+    if is_json:
+        return Response({'success': True, 'message': 'OTP sent to email', 'otp_required': True})
+    return redirect('verify_otp')
 
 
 def verify_otp_view(request):

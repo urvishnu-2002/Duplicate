@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 
 class VendorProfile(models.Model):
@@ -23,10 +23,10 @@ class VendorProfile(models.Model):
         ('rejected', 'Rejected'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='vendor_profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='vendor_profile')
     shop_name = models.CharField(max_length=100)
     shop_description = models.TextField()
-    address = models.TextField()
+    address = models.TextField() 
     business_type = models.CharField(max_length=20, choices=BUSINESS_CHOICES)
     
     # Legacy fields (kept for backward compatibility)
@@ -46,6 +46,14 @@ class VendorProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_blocked = models.BooleanField(default=False)
     blocked_reason = models.TextField(blank=True, null=True)
+    
+    # Bank Details
+    bank_holder_name = models.CharField(max_length=100, blank=True, null=True)
+    bank_account_number = models.CharField(max_length=20, blank=True, null=True)
+    bank_ifsc_code = models.CharField(max_length=11, blank=True, null=True)
+    
+    # Shipping Preferences
+    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     class Meta:
         ordering = ['-created_at']
