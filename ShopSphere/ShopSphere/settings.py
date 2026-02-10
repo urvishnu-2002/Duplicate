@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    # 'vendor',
+    'vendor',
     # 'admin.apps.AdminConfig',
     # 'superAdmin',
     'user',
@@ -208,3 +208,4 @@ SIMPLE_JWT = {
 
 # Disable automatic trailing slash append
 # APPEND_SLASH = True
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

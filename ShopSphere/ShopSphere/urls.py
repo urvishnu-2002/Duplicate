@@ -13,7 +13,7 @@ urlpatterns = [
     # API endpoints for each app
     path('', include('user.urls')),
     # Uncomment these as you enable the apps in settings.py
-    # path('api/vendor/', include('vendor.urls')),
+    path('vendor/', include('vendor.urls')),
     # path('api/delivery/', include('deliveryAgent.urls')),
     # path('api/superadmin/', include('superAdmin.urls')),
     # path('api/shopadmin/', include('admin.urls')),

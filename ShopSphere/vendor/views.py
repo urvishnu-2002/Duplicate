@@ -5,11 +5,12 @@ import random
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.http import JsonResponse
 from .models import VendorProfile, Product
+
+User = get_user_model()
 
 
 # ============================================================================
@@ -85,8 +86,8 @@ def verify_otp_view(request):
             user = User.objects.create_user(
                 username=reg_data['username'],
                 email=reg_data['email'],
-                password=reg_data['password']
-
+                password=reg_data['password'],
+                role='vendor'
             )
             request.session['vendor_user_id'] = user.id
             del request.session['reg_data']
