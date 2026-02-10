@@ -46,8 +46,6 @@ INSTALLED_APPS = [
     # 'superAdmin',
     'user',
     # 'deliveryAgent',
-
-    'customer',
 ]
 
 MIDDLEWARE = [
@@ -131,7 +129,7 @@ STATIC_URL = 'static/'
 APPEND_SLASH = False
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
@@ -163,11 +161,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 
-    ),
-}
+],
 
 # Custom User Model
-AUTH_USER_MODEL = 'customer.AuthUser'
+AUTH_USER_MODEL = 'user.AuthUser'
 
 
 AUTH_USER_MODEL = 'myapp.Agent'

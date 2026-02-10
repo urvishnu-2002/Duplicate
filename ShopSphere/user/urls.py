@@ -13,6 +13,6 @@ urlpatterns = [
     path('checkout', views.checkout_view, name='checkout'),
     path('process_payment', views.process_payment, name='process_payment'),
     path('my_orders/', views.my_orders, name='my_orders'),
-    path('address/', views.address_page, name="address_page"),
-    path('delete-address/<int:id>/', views.delete_address, name="delete_address"),
+    #path('address/', views.address_page, name="address_page"),
+    #path('delete-address/<int:id>/', views.delete_address, name="delete_address"),
 ]

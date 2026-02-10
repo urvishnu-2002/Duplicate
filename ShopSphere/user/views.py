@@ -244,8 +244,6 @@ def process_payment(request):
                     "price": float(item.product.price)
                 })
             cart.items.all().delete()
-        except Cart.DoesNotExist:
-            return Response({"error": "No cart items found"}, status=400)
 
     if not items_to_process:
         print(f"DEBUG: Payment Error - No items to process.")
@@ -261,21 +259,21 @@ def process_payment(request):
         transaction_id=transaction_id,
         item_names=summary_str
     )
-            order = Order.objects.create(
-                user=request.user,
-                payment_mode=payment_mode,
-                transaction_id=transaction_id,
-                item_names=item_name_str
-            )
+    order = Order.objects.create(
+        user=request.user,
+        payment_mode=payment_mode,
+        transaction_id=transaction_id,
+        item_names=item_name_str
+    )
             
-            OrderItem.objects.create(
-                order=order,
-                product_name=item.product.name,
-                quantity=item.quantity,
-                price=item.product.price
-            )
-            created_orders.append(order)
-            item.delete()
+    OrderItem.objects.create(
+        order=order,
+        product_name=item.product.name,
+        quantity=item.quantity,
+        price=item.product.price
+    )
+    created_orders.append(order)
+    item.delete()
 
 
     if 'application/json' in request.headers.get('Accept', ''):
