@@ -44,7 +44,11 @@ INSTALLED_APPS = [
     'vendor',
     'superAdmin',
     'user',
+<<<<<<< HEAD
     'deliveryAgent',
+=======
+    # 'deliveryAgent',
+>>>>>>> fd41c919c64636da291bf9ad93e0ba5baecdfc4d
 ]
 
 MIDDLEWARE = [
@@ -162,9 +166,16 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
+<<<<<<< HEAD
 
 # Custom User Model
 # AUTH_USER_MODEL = 'customer.AuthUser'
+=======
+],
+
+# Custom User Model
+AUTH_USER_MODEL = 'user.AuthUser'
+>>>>>>> fd41c919c64636da291bf9ad93e0ba5baecdfc4d
 
 
 # AUTH_USER_MODEL = 'myapp.Agent'
