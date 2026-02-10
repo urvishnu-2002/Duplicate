@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from ecommapp.models import VendorProfile, Product
+from vendor.models import VendorProfile, Product
 from .models import VendorApprovalLog, ProductApprovalLog
 
 

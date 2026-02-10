@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from ecommapp.models import VendorProfile, Product
+from vendor.models import VendorProfile, Product
 
 
 class VendorApprovalLog(models.Model):

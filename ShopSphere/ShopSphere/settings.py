@@ -38,8 +38,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+
+    'rest_framework.authtoken',
+    'corsheaders',
+    # 'vendor',
+    # 'admin.apps.AdminConfig',
+    # 'superAdmin',
+    'user',
+    # 'deliveryAgent',
+
     'customer',
-   
 ]
 
 MIDDLEWARE = [
@@ -126,11 +134,41 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+}
+
+# CORS Configuration for Frontend Integration
+CORS_ALLOW_CREDENTIALS = True
+#CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5174",
+    "http://localhost:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5173",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+
     ),
 }
 
 # Custom User Model
 AUTH_USER_MODEL = 'customer.AuthUser'
+
 
 AUTH_USER_MODEL = 'myapp.Agent'
 
@@ -143,5 +181,21 @@ LOGOUT_REDIRECT_URL = 'agentPortal'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+
+# Custom User Model
+AUTH_USER_MODEL = 'user.AuthUser'
+
+# JWT Settings
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# Disable automatic trailing slash append
+# APPEND_SLASH = True
+
 # Optional: static files folder
 STATICFILES_DIRS = [BASE_DIR / 'static']
+

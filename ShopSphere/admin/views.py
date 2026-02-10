@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
-from ecommapp.models import VendorProfile, Product
+from vendor.models import VendorProfile, Product
 
 
 def is_admin(user):
