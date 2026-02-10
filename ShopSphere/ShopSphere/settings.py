@@ -40,11 +40,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'vendor',
-    'admin',
-    'superAdmin',
+    # 'vendor',
+    # 'admin.apps.AdminConfig',
+    # 'superAdmin',
     'user',
-    'deliveryAgent',
+    # 'deliveryAgent',
 ]
 
 LOGIN_URL = 'login'
@@ -54,7 +54,6 @@ LOGOUT_REDIRECT_URL = 'login'
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,7 +79,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ecomm.wsgi.application'
+WSGI_APPLICATION = 'ShopSphere.wsgi.application'
 
 
 # Database
@@ -154,7 +153,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -172,12 +171,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "http://localhost:5173",
     "http://127.0.0.1:5174",
+    "http://127.0.0.1:5173",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5174",
     "http://127.0.0.1:5174",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 
 ]
 
@@ -206,4 +207,4 @@ SIMPLE_JWT = {
 }
 
 # Disable automatic trailing slash append
-APPEND_SLASH = False
+# APPEND_SLASH = True

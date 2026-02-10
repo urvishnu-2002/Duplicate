@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.contrib.auth.models import User
 from django.db.models import Q
-from ecommapp.models import VendorProfile, Product
+from vendor.models import VendorProfile, Product
 from .models import VendorApprovalLog, ProductApprovalLog
 from .serializers import (
     VendorApprovalLogSerializer, ProductApprovalLogSerializer,
