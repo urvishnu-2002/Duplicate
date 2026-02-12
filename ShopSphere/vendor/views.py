@@ -27,7 +27,7 @@ User = get_user_model()
 def register_view(request):
     """Vendor registration - handles both traditional form and JSON API"""
     if request.method == "GET":
-        return render(request, 'ecommapp/register.html')
+        return render(request, 'register.html')
 
     # Detect if it's a JSON request (from frontend)
     is_json = 'application/json' in request.headers.get('Accept', '') or \
@@ -40,34 +40,40 @@ def register_view(request):
     email = data.get('email')
     password = data.get('password')
 
-    user = None
-    if request.user.is_authenticated:
-        user = request.user
-    elif username and email and password:
-        # Detect if user already exists
-        user = User.objects.filter(email=email).first() or User.objects.filter(username=username).first()
-        if not user:
-            # Create the user if doesn't exist
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password
-            )
-            print(f"DEBUG: Created new user {user.email} for vendor registration.")
-    else:
-        if is_json:
-            return Response({'error': 'Username, email, and password are required for new users'}, status=400)
-        return render(request, 'ecommapp/register.html', {'error': 'Required fields missing'})
+    # Validation for new users
+    if not request.user.is_authenticated:
+        if not (username and email and password):
+            if is_json:
+                return Response({'error': 'Username, email, and password are required for new users'}, status=400)
+            return render(request, 'register.html', {'error': 'Required fields missing'})
+        
+        # Check if user already exists
+        if User.objects.filter(username=username).exists():
+            if is_json: return Response({'error': 'Username already exists'}, status=400)
+            return render(request, 'register.html', {'error': 'Username already exists'})
+            
+        if User.objects.filter(email=email).exists():
+            if is_json: return Response({'error': 'Email already exists'}, status=400)
+            return render(request, 'register.html', {'error': 'Email already exists'})
 
-    # If it's the NEW full registration flow from BankDetails.jsx
+    # If it's the NEW full registration flow from BankDetails.jsx (Atomic Registration)
     if is_json and data.get('bank_account_number'):
         try:
             with transaction.atomic():
-                # If user exists, check if they already have a vendor profile
+                # Get or Create User
+                if request.user.is_authenticated:
+                    user = request.user
+                else:
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password
+                    )
+                    print(f"DEBUG: Created new user {user.email} for atomic vendor registration.")
+
+                # Check if they already have a vendor profile
                 if VendorProfile.objects.filter(user=user).exists():
                     return Response({'error': 'You already have a vendor profile or a pending request.'}, status=400)
-                
-                print(f"DEBUG: Using user {user.email}. Converting to vendor request.")
                 
                 # Create the vendor profile with all registration data
                 VendorProfile.objects.create(
@@ -112,7 +118,7 @@ def register_view(request):
         )
     except Exception as e:
         if is_json: return Response({'error': f'Error sending OTP: {str(e)}'}, status=500)
-        return render(request, 'ecommapp/register.html', {'error': f'Error sending OTP: {str(e)}'})
+        return render(request, 'register.html', {'error': f'Error sending OTP: {str(e)}'})
 
     if is_json:
         return Response({'success': True, 'message': 'OTP sent to email', 'otp_required': True})

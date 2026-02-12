@@ -149,3 +149,18 @@ LOGOUT_REDIRECT_URL = 'login'
 
 # Disable automatic trailing slash append if needed (User had it False previously)
 APPEND_SLASH = False
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'nandhuuppalapati@gmail.com'
+EMAIL_HOST_PASSWORD = 'gwojlfspeggsrasr'
+
+#import certifi
+import ssl
+
+#EMAIL_SSL_CERTFILE = certifi.where()
+EMAIL_SSL_KEYFILE = None

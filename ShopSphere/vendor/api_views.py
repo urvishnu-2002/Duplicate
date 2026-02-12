@@ -90,11 +90,11 @@ class VendorDetailsView(generics.GenericAPIView):
         if not vendor_user_id:
             # If authenticated via API token, use that user
             if request.user.is_authenticated:
-                return render(request, 'ecommapp/vendor_details.html')
+                return render(request, 'vendor/vendor_details.html')
             else:
                 return redirect('register')
         
-        return render(request, 'ecommapp/vendor_details.html')
+        return render(request, 'vendor/vendor_details.html')
     
     def post(self, request, *args, **kwargs):
         """Process vendor details form submission"""
@@ -113,7 +113,7 @@ class VendorDetailsView(generics.GenericAPIView):
         vendor = VendorProfile.objects.filter(user=user).first()
         
         if vendor:
-            return render(request, 'ecommapp/vendor_details.html', {
+            return render(request, 'vendor/vendor_details.html', {
                 'error': 'Vendor profile already exists'
             })
         

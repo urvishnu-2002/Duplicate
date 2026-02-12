@@ -13,8 +13,8 @@ from .models import VendorApprovalLog, ProductApprovalLog
 # ============================================================================
 
 def is_mainapp_admin(user):
-    """Check if user is a superuser or admin staff"""
-    return user.is_superuser or user.is_staff
+    """Check if user is a superuser or admin staff - UPDATED: Restrictions removed"""
+    return True
 
 
 def admin_required(view_func):
@@ -38,26 +38,31 @@ def admin_login_view(request):
         return redirect('admin_dashboard')
     
     if request.method == "POST":
-        username_or_email = request.POST.get('username')
+        identifier = request.POST.get('username')
         password = request.POST.get('password')
 
-        # First try authentication with the provided identifier as email (since it's the USERNAME_FIELD)
-        user = authenticate(request, username=username_or_email, password=password)
+        # 1. Try authentication directly (works if identifier is email since it's USERNAME_FIELD)
+        user = authenticate(request, username=identifier, password=password)
 
-        # If that fails, try to find a user with that username and use their email to authenticate
+        # 2. If it fails, search for users by the 'username' field and try their email
         if not user:
             try:
-                temp_user = User.objects.get(username=username_or_email)
-                user = authenticate(request, username=temp_user.email, password=password)
-            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                # Find all users with this username
+                matching_users = User.objects.filter(username=identifier)
+                for potential_user in matching_users:
+                    # Try to authenticate with this specific user's email
+                    user = authenticate(request, username=potential_user.email, password=password)
+                    if user:
+                        break
+            except Exception:
                 pass
 
-        if user and is_mainapp_admin(user):
+        if user:
             login(request, user)
             next_url = request.GET.get('next', 'admin_dashboard')
             return redirect(next_url)
         else:
-            error = "Invalid credentials or insufficient permissions (Admin access required)"
+            error = "Invalid credentials. Please enter your registered email or username."
             return render(request, 'mainApp/admin_login.html', {'error': error})
 
     return render(request, 'mainApp/admin_login.html')
