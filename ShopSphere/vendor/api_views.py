@@ -3,8 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
 from .models import VendorProfile, Product
 from .serializers import (
@@ -12,6 +11,9 @@ from .serializers import (
     VendorProfileSerializer, VendorRegistrationSerializer,
     ProductSerializer, ProductCreateUpdateSerializer, ProductListSerializer
 )
+
+User = get_user_model()
+
 
 
 class RegisterView(generics.CreateAPIView):

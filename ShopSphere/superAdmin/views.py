@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout, get_user_model
+User = get_user_model()
 from django.db.models import Q
 from django.urls import reverse
 from vendor.models import VendorProfile, Product
@@ -38,10 +38,19 @@ def admin_login_view(request):
         return redirect('admin_dashboard')
     
     if request.method == "POST":
-        username = request.POST.get('username')
+        username_or_email = request.POST.get('username')
         password = request.POST.get('password')
 
-        user = authenticate(request, username=username, password=password)
+        # First try authentication with the provided identifier as email (since it's the USERNAME_FIELD)
+        user = authenticate(request, username=username_or_email, password=password)
+
+        # If that fails, try to find a user with that username and use their email to authenticate
+        if not user:
+            try:
+                temp_user = User.objects.get(username=username_or_email)
+                user = authenticate(request, username=temp_user.email, password=password)
+            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                pass
 
         if user and is_mainapp_admin(user):
             login(request, user)

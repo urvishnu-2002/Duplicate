@@ -41,17 +41,19 @@ INSTALLED_APPS = [
 
     'rest_framework.authtoken',
     'corsheaders',
-    # 'vendor',
+    'vendor',
     # 'admin.apps.AdminConfig',
-    # 'superAdmin',
+    'superAdmin',
     'user',
+    # 'admin',
     # 'deliveryAgent',
 
-    'customer',
+    
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -131,7 +133,7 @@ STATIC_URL = 'static/'
 APPEND_SLASH = False
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
@@ -163,19 +165,18 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 
-    ),
-}
+]
+
+
 
 # Custom User Model
-AUTH_USER_MODEL = 'customer.AuthUser'
+# AUTH_USER_MODEL = 'customer.AuthUser'
 
-
-AUTH_USER_MODEL = 'myapp.Agent'
 
 # Redirect URLs
-LOGIN_URL = 'agentPortal'
-LOGIN_REDIRECT_URL = 'delivery_dashboard'
-LOGOUT_REDIRECT_URL = 'agentPortal'
+LOGIN_URL = 'admin_login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'admin_login'
 
 # Media files (for profile pics if needed)
 MEDIA_URL = '/media/'
@@ -199,3 +200,15 @@ SIMPLE_JWT = {
 # Optional: static files folder
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+import ssl
+
+EMAIL_SSL_KEYFILE = None
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'nandhuuppalapati@gmail.com'
+EMAIL_HOST_PASSWORD = 'gwojlfspeggsrasr'

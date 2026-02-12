@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from vendor.models import VendorProfile, Product
 
@@ -19,7 +19,7 @@ class VendorApprovalLog(models.Model):
     ]
 
     vendor = models.ForeignKey(VendorProfile, on_delete=models.CASCADE, related_name='approval_logs')
-    admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='vendor_approvals')
+    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='vendor_approvals')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     reason = models.TextField(blank=True, null=True)
     timestamp = models.DateTimeField(default=timezone.now)
@@ -43,7 +43,7 @@ class ProductApprovalLog(models.Model):
     ]
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='approval_logs')
-    admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='product_approvals')
+    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='product_approvals')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     reason = models.TextField(blank=True, null=True)
     timestamp = models.DateTimeField(default=timezone.now)
