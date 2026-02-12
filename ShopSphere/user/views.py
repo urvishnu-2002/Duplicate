@@ -4,14 +4,10 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
-<<<<<<< HEAD
 from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
 from .forms import AddressForm
-=======
 from django.contrib.auth.decorators import login_required
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
-
 from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
 from .forms import AddressForm
@@ -87,11 +83,7 @@ def home_api(request):
     products = VendorProduct.objects.all()
     
     # API / JSON Response
-<<<<<<< HEAD
     if 'application/json' in request.headers.get('Accept', '') or request.accepted_renderer.format == 'json':
-=======
-    if request.accepted_renderer.format == 'json':
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
         
@@ -181,14 +173,10 @@ def checkout_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def process_payment(request):
-<<<<<<< HEAD
     if not request.user.is_authenticated:
         return Response({"error": "Authentication required"}, status=401)
         
     payment_mode = request.data.get('payment_mode')
-=======
-    payment_mode = request.data.get('payment_mode') or request.POST.get('payment_mode')
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
     transaction_id = request.data.get('transaction_id')
     items_from_request = request.data.get('items')
 
@@ -199,33 +187,30 @@ def process_payment(request):
     # a Single Order with multiple items.
 
     if not payment_mode:
-<<<<<<< HEAD
         print(f"DEBUG: Payment Error - Missing payment_mode. Data: {request.data}")
         return Response({"error": "Payment mode required"}, status=400)
 
     items_to_process = []
     
     # CASE 1: Items are passed directly in the request (Frontend Redux state)
-=======
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Payment mode required"}, status=400)
-        return redirect('checkout')
+    if request.accepted_renderer.format == 'json':
+        return Response({"error": "Payment mode required"}, status=400)
+    return redirect('checkout')
 
     order = None
 
     # CASE 1: Items passed directly (e.g. from a separate frontend state / Buy Now)
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
     if items_from_request:
         summary_items = []
         for item_data in items_from_request:
-<<<<<<< HEAD
+
             items_to_process.append({
                 "name": item_data.get('name'),
                 "quantity": item_data.get('quantity', 1),
                 "price": item_data.get('price', 0)
             })
     # CASE 2: Fallback to Backend Database Cart
-=======
+
             name = item_data.get('name')
             quantity = item_data.get('quantity', 1)
             summary_items.append(f"{quantity} x {name}")
@@ -260,28 +245,12 @@ def process_payment(request):
              pass
             
     # CASE 2: Use items from the database cart
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
+
     else:
         try:
             cart = Cart.objects.get(user=request.user)
             cart_items = cart.items.all()
             if not cart_items:
-<<<<<<< HEAD
-                if 'application/json' in request.headers.get('Accept', ''):
-                    return Response({"error": "Cart is empty"}, status=400)
-                return redirect('home')
-                
-            for item in cart_items:
-                items_to_process.append({
-                    "name": item.product.name,
-                    "quantity": item.quantity,
-                    "price": float(item.product.price)
-                })
-        except Cart.DoesNotExist:
-            if 'application/json' in request.headers.get('Accept', ''):
-                return Response({"error": "Cart not found and no items provided"}, status=404)
-            return redirect('home')
-=======
                 if request.accepted_renderer.format == 'json':
                     return Response({"error": "Cart is empty"}, status=400)
                 return redirect('cart')
@@ -291,7 +260,6 @@ def process_payment(request):
             for item in cart_items:
                  summary_items.append(f"{item.quantity} x {item.product.name}")
             item_names_str = ", ".join(summary_items)
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
 
             # Create Single Order
             try:
@@ -304,37 +272,6 @@ def process_payment(request):
             except Exception as e:
                 return Response({"error": f"Database Error: {str(e)}"}, status=500)
 
-<<<<<<< HEAD
-    # Create ONE Order for the entire transaction
-    summary_str = ", ".join([f"{i.get('quantity')} x {i.get('name')}" for i in items_to_process])
-    
-    order = Order.objects.create(
-        user=request.user,
-        payment_mode=payment_mode,
-        transaction_id=transaction_id,
-        item_names=summary_str
-    )
-    
-    for item in items_to_process:
-        OrderItem.objects.create(
-            order=order,
-            product_name=item['name'],
-            quantity=item['quantity'],
-            price=item['price']
-        )
-    
-    # Clear the DB cart after successful order creation
-    try:
-        cart = Cart.objects.get(user=request.user)
-        cart.items.all().delete()
-    except Cart.DoesNotExist:
-        pass
-
-    if 'application/json' in request.headers.get('Accept', ''):
-        return Response({
-            "success": True, 
-            "message": "Payment successful", 
-=======
             # Create OrderItems
             for item in cart_items:
                 OrderItem.objects.create(
@@ -355,7 +292,6 @@ def process_payment(request):
         return Response({
             "success": True,
             "message": "Payment successful",
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
             "order_id": order.id
         })
 
