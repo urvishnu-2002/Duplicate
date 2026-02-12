@@ -5,12 +5,8 @@ import random
 from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
-<<<<<<< HEAD
-from django.contrib.auth import get_user_model, authenticate, login, logout
-=======
 from django.contrib.auth import authenticate, login, logout, get_user_model
 User = get_user_model()
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
@@ -33,42 +29,6 @@ def register_view(request):
     if request.method == "GET":
         return render(request, 'ecommapp/register.html')
 
-<<<<<<< HEAD
-        # Validation
-        if password != confirm_password:
-            return render(request, 'register.html', {
-                'error': 'Passwords do not match'
-            })
-
-        if User.objects.filter(username=username).exists():
-            return render(request, 'register.html', {
-                'error': 'Username already exists'
-            })
-
-        if User.objects.filter(email=email).exists():
-            return render(request, 'register.html', {
-                'error': 'Email already exists'
-            })
-
-        # Generate OTP
-        otp = random.randint(100000, 999999)
-
-        # Store in session
-        request.session['reg_data'] = {
-            'username': username,
-            'email': email,
-            'password': password,
-            'otp': otp
-        }
-
-        # Send OTP email
-        try:
-            send_mail(
-                subject="Your Vendor OTP",
-                message=f"Your OTP for registration is: {otp}\n\nDo not share this OTP with anyone.",
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[email],
-=======
     # Detect if it's a JSON request (from frontend)
     is_json = 'application/json' in request.headers.get('Accept', '') or \
               'application/json' in request.headers.get('Content-Type', '')
@@ -92,7 +52,6 @@ def register_view(request):
                 username=username,
                 email=email,
                 password=password
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
             )
             print(f"DEBUG: Created new user {user.email} for vendor registration.")
     else:
@@ -132,14 +91,8 @@ def register_view(request):
                 print(f"DEBUG: Vendor details for {user.username} sent to Admin for approval.")
                 return Response({'success': True, 'message': 'Registration submitted! Details have been sent to the Admin for approval.'}, status=201)
         except Exception as e:
-<<<<<<< HEAD
-            return render(request, 'register.html', {
-                'error': f'Error sending OTP: {str(e)}'
-            })
-=======
             print(f"DEBUG: Error during vendor registration: {str(e)}")
             return Response({'error': str(e)}, status=500)
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
 
     # LEGACY / OTP FLOW
     otp = random.randint(100000, 999999)
@@ -150,9 +103,6 @@ def register_view(request):
         'otp': otp
     }
 
-<<<<<<< HEAD
-    return render(request, 'register.html')
-=======
     try:
         send_mail(
             subject="Your Vendor OTP",
@@ -167,7 +117,6 @@ def register_view(request):
     if is_json:
         return Response({'success': True, 'message': 'OTP sent to email', 'otp_required': True})
     return redirect('verify_otp')
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
 
 
 def verify_otp_view(request):

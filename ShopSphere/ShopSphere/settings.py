@@ -29,23 +29,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-<<<<<<< HEAD
-    'vendor',
-    # 'admin.apps.AdminConfig',
-    'superAdmin',
-    'user',
-    # 'admin',
-    # 'deliveryAgent',
-
-    
-=======
     
     # Project apps
     'vendor',
     'superAdmin',
     'user',
     'deliveryAgent',
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
 ]
 
 MIDDLEWARE = [
@@ -153,61 +142,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-<<<<<<< HEAD
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-
-]
-
-
-
-# Custom User Model
-# AUTH_USER_MODEL = 'customer.AuthUser'
-
-
-# Redirect URLs
-LOGIN_URL = 'admin_login'
-LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'admin_login'
-
-# Media files (for profile pics if needed)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-
-# Custom User Model
-AUTH_USER_MODEL = 'user.AuthUser'
-
-# JWT Settings
-from datetime import timedelta
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
-
-# Disable automatic trailing slash append
-# APPEND_SLASH = True
-
-# Optional: static files folder
-STATICFILES_DIRS = [BASE_DIR / 'static']
-
-# Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-import ssl
-
-EMAIL_SSL_KEYFILE = None
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'nandhuuppalapati@gmail.com'
-EMAIL_HOST_PASSWORD = 'gwojlfspeggsrasr'
-=======
 # Redirect URLs
 LOGIN_URL = 'login' # Matches the name in user.urls
 LOGIN_REDIRECT_URL = 'home'
@@ -215,4 +149,3 @@ LOGOUT_REDIRECT_URL = 'login'
 
 # Disable automatic trailing slash append if needed (User had it False previously)
 APPEND_SLASH = False
->>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
