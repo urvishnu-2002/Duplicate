@@ -1,49 +1,62 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate, login ,logout
+from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
+<<<<<<< HEAD
+from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
+from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
+from .forms import AddressForm
+=======
+from django.contrib.auth.decorators import login_required
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
+
 from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
 from .forms import AddressForm
 
-
 # 🔹 REGISTER
 @api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def register_api(request):
     if request.method == 'GET':
         return render(request, "user_register.html")
     
     serializer = RegisterSerializer(data=request.data)
-
-    
-    print(f"DEBUG: Register Data: {request.data}")
-
     if serializer.is_valid():
         serializer.save()
-        if 'application/json' in request.headers.get('Accept', ''):
+        if request.accepted_renderer.format == 'json':
             return Response({"message": "User registered successfully"}, status=201)
         return redirect('login')
 
-    
-    print(f"DEBUG: Register Errors: {serializer.errors}")
-
-
-    return Response(serializer.errors, status=400)
+    if request.accepted_renderer.format == 'json':
+        return Response(serializer.errors, status=400)
+    return render(request, "user_register.html", {"error": serializer.errors})
 
 
 # 🔹 LOGIN (JWT token generate)
 @api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def login_api(request):
     if request.method == 'GET':
         return render(request, "user_login.html")
     
-    # We use email as the primary login field now
-    email = request.data.get('email') or request.data.get('username')
+    # support both JSON API clients (username/email) and HTML form
+    username_or_email = request.data.get('email') or request.data.get('username')
     password = request.data.get('password')
 
-    user = authenticate(username=email, password=password)
+    auth_identifier = username_or_email
+    # If user provided a username instead of an email, resolve to the underlying email
+    # because USERNAME_FIELD is 'email' in our AuthUser model.
+    if username_or_email and '@' not in username_or_email:
+        try:
+            u = AuthUser.objects.get(username=username_or_email)
+            auth_identifier = u.email
+        except AuthUser.DoesNotExist:
+            auth_identifier = None
+
+    user = authenticate(username=auth_identifier, password=password)
 
     if user:
         # Use session login for HTML form submissions
@@ -52,8 +65,7 @@ def login_api(request):
         # For API/JSON clients, also return JWT tokens
         refresh = RefreshToken.for_user(user)
         
-        # Check if it's HTML form submission vs JSON API
-        if 'application/json' in request.headers.get('Accept', ''):
+        if request.accepted_renderer.format == 'json':
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
@@ -70,11 +82,16 @@ from vendor.models import Product as VendorProduct
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def home_api(request):
     products = VendorProduct.objects.all()
     
     # API / JSON Response
+<<<<<<< HEAD
     if 'application/json' in request.headers.get('Accept', '') or request.accepted_renderer.format == 'json':
+=======
+    if request.accepted_renderer.format == 'json':
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
         
@@ -83,7 +100,6 @@ def home_api(request):
     if request.user.is_authenticated:
         try:
             cart = Cart.objects.get(user=request.user)
-            # Sum of quantities
             cart_count = sum(item.quantity for item in cart.items.all())
         except Cart.DoesNotExist:
             pass
@@ -94,13 +110,11 @@ def home_api(request):
         "user": request.user
     })
 
+
 # 🔹 ADD TO CART
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def add_to_cart(request, product_id):
-    if not request.user.is_authenticated:
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Authentication required"}, status=401)
-        return redirect('login')
     product = get_object_or_404(Product, id=product_id)
     cart, created = Cart.objects.get_or_create(user=request.user)
     
@@ -110,7 +124,7 @@ def add_to_cart(request, product_id):
         cart_item.quantity += 1
         cart_item.save()
     
-    if 'application/json' in request.headers.get('Accept', ''):
+    if request.accepted_renderer.format == 'json':
         return Response({"message": "Item added to cart", "cart_count": cart.items.count()})
         
     return redirect('home')
@@ -118,15 +132,12 @@ def add_to_cart(request, product_id):
 
 # 🔹 VIEW CART
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def cart_view(request):
-    if not request.user.is_authenticated:
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Authentication required"}, status=401)
-        return redirect('login')
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = cart.items.all()
     
-    if 'application/json' in request.headers.get('Accept', ''):
+    if request.accepted_renderer.format == 'json':
         serializer = CartSerializer(cart)
         return Response(serializer.data)
         
@@ -140,23 +151,20 @@ def cart_view(request):
 
 # 🔹 CHECKOUT
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def checkout_view(request):
-    if not request.user.is_authenticated:
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Authentication required"}, status=401)
-        return redirect('login')
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = cart.items.all()
     
     if not cart_items:
-        if 'application/json' in request.headers.get('Accept', ''):
+        if request.accepted_renderer.format == 'json':
              return Response({"message": "Cart is empty"}, status=400)
         return redirect('cart')
         
     total_price = sum(item.total_price() for item in cart_items)
     items_count = sum(item.quantity for item in cart_items)
     
-    if 'application/json' in request.headers.get('Accept', ''):
+    if request.accepted_renderer.format == 'json':
         return Response({
             "total_price": total_price,
             "items_count": items_count,
@@ -171,34 +179,94 @@ def checkout_view(request):
 
 # 🔹 PROCESS PAYMENT
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def process_payment(request):
+<<<<<<< HEAD
     if not request.user.is_authenticated:
         return Response({"error": "Authentication required"}, status=401)
         
     payment_mode = request.data.get('payment_mode')
+=======
+    payment_mode = request.data.get('payment_mode') or request.POST.get('payment_mode')
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
     transaction_id = request.data.get('transaction_id')
-    items_from_request = request.data.get('items') # For frontend direct sync
-    
+    items_from_request = request.data.get('items')
+
+    # Add timestamp to transaction_id to ensure uniqueness for retries if needed, 
+    # BUT better to rely on frontend sending unique IDs or handling it.
+    # However, to fix the specific error 500 which is due to trying to create MULTIPLE Orders 
+    # with the SAME transaction_id (Unique Constraint Violation), we must refactor to create
+    # a Single Order with multiple items.
+
     if not payment_mode:
+<<<<<<< HEAD
         print(f"DEBUG: Payment Error - Missing payment_mode. Data: {request.data}")
         return Response({"error": "Payment mode required"}, status=400)
 
     items_to_process = []
     
     # CASE 1: Items are passed directly in the request (Frontend Redux state)
+=======
+        if request.accepted_renderer.format == 'json':
+            return Response({"error": "Payment mode required"}, status=400)
+        return redirect('checkout')
+
+    order = None
+
+    # CASE 1: Items passed directly (e.g. from a separate frontend state / Buy Now)
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
     if items_from_request:
+        summary_items = []
         for item_data in items_from_request:
+<<<<<<< HEAD
             items_to_process.append({
                 "name": item_data.get('name'),
                 "quantity": item_data.get('quantity', 1),
                 "price": item_data.get('price', 0)
             })
     # CASE 2: Fallback to Backend Database Cart
+=======
+            name = item_data.get('name')
+            quantity = item_data.get('quantity', 1)
+            summary_items.append(f"{quantity} x {name}")
+            
+        item_names_str = ", ".join(summary_items)
+        
+        # Create Single Order
+        try:
+            order = Order.objects.create(
+                user=request.user,
+                payment_mode=payment_mode,
+                transaction_id=transaction_id,
+                item_names=item_names_str
+            )
+        except Exception as e:
+            # Handle potential race condition or duplicate transaction ID
+             return Response({"error": f"Database Error: {str(e)}"}, status=500)
+        
+        # Create OrderItems
+        for item_data in items_from_request:
+            OrderItem.objects.create(
+                order=order,
+                product_name=item_data.get('name'),
+                quantity=item_data.get('quantity', 1),
+                price=item_data.get('price', 0)
+            )
+
+        # Optional: Clear cart if bought directly? Assuming yes for consistency
+        try:
+             Cart.objects.filter(user=request.user).delete()
+        except:
+             pass
+            
+    # CASE 2: Use items from the database cart
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
     else:
         try:
             cart = Cart.objects.get(user=request.user)
             cart_items = cart.items.all()
             if not cart_items:
+<<<<<<< HEAD
                 if 'application/json' in request.headers.get('Accept', ''):
                     return Response({"error": "Cart is empty"}, status=400)
                 return redirect('home')
@@ -213,11 +281,30 @@ def process_payment(request):
             if 'application/json' in request.headers.get('Accept', ''):
                 return Response({"error": "Cart not found and no items provided"}, status=404)
             return redirect('home')
+=======
+                if request.accepted_renderer.format == 'json':
+                    return Response({"error": "Cart is empty"}, status=400)
+                return redirect('cart')
 
-    if not items_to_process:
-        print(f"DEBUG: Payment Error - No items to process.")
-        return Response({"error": "No items to process"}, status=400)
+            # Build summary string
+            summary_items = []
+            for item in cart_items:
+                 summary_items.append(f"{item.quantity} x {item.product.name}")
+            item_names_str = ", ".join(summary_items)
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
 
+            # Create Single Order
+            try:
+                order = Order.objects.create(
+                    user=request.user,
+                    payment_mode=payment_mode,
+                    transaction_id=transaction_id,
+                    item_names=item_names_str
+                )
+            except Exception as e:
+                return Response({"error": f"Database Error: {str(e)}"}, status=500)
+
+<<<<<<< HEAD
     # Create ONE Order for the entire transaction
     summary_str = ", ".join([f"{i.get('quantity')} x {i.get('name')}" for i in items_to_process])
     
@@ -247,22 +334,41 @@ def process_payment(request):
         return Response({
             "success": True, 
             "message": "Payment successful", 
+=======
+            # Create OrderItems
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product_name=item.product.name,
+                    quantity=item.quantity,
+                    price=item.product.price
+                )
+            
+            cart.items.all().delete()
+            
+        except Cart.DoesNotExist:
+            if request.accepted_renderer.format == 'json':
+                return Response({"error": "Cart not found"}, status=404)
+            return redirect('home')
+
+    if request.accepted_renderer.format == 'json':
+        return Response({
+            "success": True,
+            "message": "Payment successful",
+>>>>>>> 039501b31bd951b814ae952af8abc44f806c2f41
             "order_id": order.id
         })
-        
+
     return redirect('my_orders')
 
 
 # 🔹 MY ORDERS
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def my_orders(request):
-    if not request.user.is_authenticated:
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Authentication required"}, status=401)
-        return redirect('login')
     orders = Order.objects.filter(user=request.user).order_by('-order_date')
     
-    if 'application/json' in request.headers.get('Accept', ''):
+    if request.accepted_renderer.format == 'json':
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
         
@@ -298,6 +404,34 @@ def delete_address(request, id):
 
 # 🔹 LOGOUT
 @api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def logout_api(request):
     logout(request)
     return redirect('login')
+
+
+# 🔹 ADDRESS MANAGEMENT
+@login_required
+def address_page(request):
+    addresses = Address.objects.filter(user=request.user)
+    if request.method == "POST":
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user
+            address.save()
+            return redirect("address_page")
+    else:
+        form = AddressForm()
+
+    return render(request, "address.html", {
+        "form": form,
+        "addresses": addresses
+    })
+
+
+@login_required
+def delete_address(request, id):
+    addr = get_object_or_404(Address, id=id, user=request.user)
+    addr.delete()
+    return redirect("address_page")

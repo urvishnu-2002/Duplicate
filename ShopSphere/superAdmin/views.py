@@ -151,6 +151,11 @@ def approve_vendor(request, vendor_id):
         vendor.rejection_reason = None
         vendor.save()
 
+        # Update user role to vendor
+        user = vendor.user
+        user.role = 'vendor'
+        user.save()
+
         # Create approval log
         VendorApprovalLog.objects.create(
             vendor=vendor,

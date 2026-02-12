@@ -42,7 +42,8 @@ class Order(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
+        related_name='assigned_orders'
     )
 
     def __str__(self):
