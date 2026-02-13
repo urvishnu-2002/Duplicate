@@ -3,10 +3,16 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Agent
 
 class AgentRegistrationForm(UserCreationForm):
+    VEHICLE_CHOICES = [
+        ('bike', 'Bike'),
+        ('van', 'Van'),
+        ('truck', 'Truck'),
+    ]
+
     mobile = forms.CharField(max_length=15, required=True)
     license_number = forms.CharField(max_length=50, required=True)
     company_name = forms.CharField(max_length=100, required=True)
-    vehicle_type = forms.ChoiceField(choices=[('bike', 'Bike'), ('van', 'Van'), ('truck', 'Truck')])
+    vehicle_type = forms.ChoiceField(choices=VEHICLE_CHOICES)
 
     class Meta(UserCreationForm.Meta):
         model = Agent
@@ -17,9 +23,12 @@ class AgentRegistrationForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        style = (
+            'w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-[2rem] '
+            'font-bold tracking-wide focus:border-[#5D56D1] outline-none transition-all'
+        )
+
         for field in self.fields.values():
-            field.widget.attrs.update({
-                'class': 'w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-[2rem] font-bold tracking-wide focus:border-[#5D56D1] outline-none transition-all'
-            })
+            field.widget.attrs.update({'class': style})
 
         self.fields['username'].widget.attrs['class'] += ' custom-input-class'
