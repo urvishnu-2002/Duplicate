@@ -9,6 +9,8 @@ urlpatterns = [
 
     # Shop / Product
     path('', views.home_api, name='home'),
+    path('userProducts', views.home_api, name='home'),
+    
     
     # Cart
     path('cart', views.cart_view, name='cart'),

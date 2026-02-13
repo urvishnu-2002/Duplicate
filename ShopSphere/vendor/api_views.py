@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
-from .models import VendorProfile, Product
+from .models import VendorProfile, Product, ProductImage
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, LoginSerializer,
     VendorProfileSerializer, VendorRegistrationSerializer,
@@ -209,19 +209,33 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': 'Vendor profile not found'
             }, status=status.HTTP_404_NOT_FOUND)
-        
+
+        images = request.FILES.getlist('images')
+
+        if len(images) < 4:
+            return Response({
+                'error': 'Minimum 4 images are required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         product = Product.objects.create(
             vendor=vendor,
             **serializer.validated_data
         )
-        
+
+        for image in images:
+            ProductImage.objects.create(
+                product=product,
+                image=image
+            )
+
         return Response(
             ProductSerializer(product).data,
             status=status.HTTP_201_CREATED
         )
+
     
     def list(self, request, *args, **kwargs):
         try:
@@ -247,6 +261,37 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    def update(self, request, *args, **kwargs):
+        product = self.get_object()
+
+        if product.vendor.user != request.user:
+            return Response({
+                'error': 'You do not have permission to update this product'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        images = request.FILES.getlist('images')
+
+        serializer = self.get_serializer(product, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # If images are sent → replace old ones
+        if images:
+            if len(images) < 4:
+                return Response({
+                    'error': 'Minimum 4 images are required.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            product.images.all().delete()
+
+            for image in images:
+                ProductImage.objects.create(
+                    product=product,
+                    image=image
+                )
+
+        return Response(ProductSerializer(product).data)
+
     
     def destroy(self, request, *args, **kwargs):
         product = self.get_object()

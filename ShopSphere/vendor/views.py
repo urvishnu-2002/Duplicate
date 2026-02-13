@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import VendorProfile, Product
+from .models import VendorProfile, Product, ProductImage
 from django.db import transaction
 
 User = get_user_model()
@@ -182,7 +182,6 @@ def vendor_details_view(request):
         if 'vendor_user_id' in request.session:
             del request.session['vendor_user_id']
         return redirect('login')
-
     return render(request, 'vendor_details.html')
 
 
@@ -210,7 +209,6 @@ def login_view(request):
             return render(request, 'login.html', {
                 'error': 'Invalid credentials'
             })
-
     return render(request, 'login.html')
 
 
@@ -283,38 +281,70 @@ def approval_status_view(request):
 # PRODUCT MANAGEMENT - VENDOR SIDE
 # ============================================================================
 
+# ============================================================================
+# PRODUCT MANAGEMENT - VENDOR SIDE (UPDATED FOR MULTIPLE IMAGES)
+# ============================================================================
+
 @login_required(login_url='login')
 def add_product_view(request):
-    """Add new product to vendor's store"""
+    """Add new product with minimum 4 images"""
+
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
         return redirect('login')
 
-    # Check approval
     if vendor.approval_status != 'approved':
         return redirect('approval_status')
 
     if request.method == "POST":
-        Product.objects.create(
+        category = request.POST.get('category')
+        if category == 'other':
+            category = request.POST.get('custom_category', 'other')
+
+        # 🔥 Get multiple images
+        images = request.FILES.getlist('images')
+
+        # 🔥 Validate minimum 4 images
+        if len(images) < 4:
+            return render(request, 'add_product.html', {
+                'vendor': vendor,
+                'categories': Product.CATEGORY_CHOICES,
+                'error': 'Minimum 4 images required.'
+            })
+
+        # ✅ Create Product (WITHOUT image field)
+        product = Product.objects.create(
             vendor=vendor,
             name=request.POST.get('name'),
             description=request.POST.get('description'),
+            category=category,
             price=request.POST.get('price'),
             quantity=request.POST.get('quantity'),
-            image=request.FILES.get('image'),
             status='active'
         )
+
+        # ✅ Save Images
+        for image in images:
+            ProductImage.objects.create(
+                product=product,
+                image=image
+            )
+
         return redirect('vendor_home')
 
     return render(request, 'add_product.html', {
-        'vendor': vendor
+        'vendor': vendor,
+        'categories': Product.CATEGORY_CHOICES
     })
 
 
+# ------------------------------------------------------------
+
 @login_required(login_url='login')
 def edit_product_view(request, product_id):
-    """Edit product details"""
+    """Edit product and optionally replace images"""
+
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
@@ -326,24 +356,53 @@ def edit_product_view(request, product_id):
     product = get_object_or_404(Product, id=product_id, vendor=vendor)
 
     if request.method == "POST":
+
         product.name = request.POST.get('name', product.name)
         product.description = request.POST.get('description', product.description)
+
+        category = request.POST.get('category')
+        if category == 'other':
+            category = request.POST.get('custom_category', product.category)
+
+        product.category = category
         product.price = request.POST.get('price', product.price)
         product.quantity = request.POST.get('quantity', product.quantity)
-        if request.FILES.get('image'):
-            product.image = request.FILES.get('image')
         product.save()
+
+        # 🔥 If new images uploaded, replace old images
+        new_images = request.FILES.getlist('images')
+
+        if new_images:
+            if len(new_images) < 4:
+                return render(request, 'edit_product.html', {
+                    'vendor': vendor,
+                    'product': product,
+                    'categories': Product.CATEGORY_CHOICES,
+                    'error': 'Minimum 4 images required.'
+                })
+
+            # Delete old images
+            product.images.all().delete()
+
+            # Save new images
+            for image in new_images:
+                ProductImage.objects.create(product=product, image=image)
+
         return redirect('vendor_home')
 
     return render(request, 'edit_product.html', {
         'vendor': vendor,
-        'product': product
+        'product': product,
+        'categories': Product.CATEGORY_CHOICES
     })
 
 
+# ------------------------------------------------------------
+
 @login_required(login_url='login')
 def delete_product_view(request, product_id):
-    """Delete product"""
+    """Delete product and its images"""
+
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
@@ -353,13 +412,21 @@ def delete_product_view(request, product_id):
         return redirect('approval_status')
 
     product = get_object_or_404(Product, id=product_id, vendor=vendor)
+
+    # 🔥 Delete related images first
+    product.images.all().delete()
+
     product.delete()
+
     return redirect('vendor_home')
 
 
+# ------------------------------------------------------------
+
 @login_required(login_url='login')
 def view_product_view(request, product_id):
-    """View product details"""
+    """View product with all images"""
+
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
@@ -367,9 +434,12 @@ def view_product_view(request, product_id):
 
     product = get_object_or_404(Product, id=product_id, vendor=vendor)
 
+    images = product.images.all()
+
     context = {
         'vendor': vendor,
         'product': product,
+        'images': images,
         'is_blocked': product.is_blocked,
         'blocked_reason': product.blocked_reason
     }

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import VendorProfile, Product
+from .models import VendorProfile, Product, ProductImage
 
 User = get_user_model()
 
@@ -72,17 +72,26 @@ class VendorRegistrationSerializer(serializers.Serializer):
     id_proof_file = serializers.FileField()
 
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer for ProductImage model"""
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'uploaded_at']
+
+
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for Product model"""
     vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
     
     class Meta:
         model = Product
         fields = [
-            'id', 'vendor', 'vendor_name', 'name', 'description', 'price',
-            'quantity', 'image', 'status', 'status_display', 'is_blocked',
-            'blocked_reason', 'created_at', 'updated_at'
+            'id', 'vendor', 'vendor_name', 'name', 'description', 'category', 
+            'category_display', 'price', 'quantity', 'images', 'status', 
+            'status_display', 'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'vendor', 'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
@@ -93,7 +102,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating products"""
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'quantity', 'image', 'status']
+        fields = ['name', 'description', 'category', 'price', 'quantity', 'status']
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -103,6 +112,6 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'vendor_name', 'price', 'quantity',
+            'id', 'name', 'category', 'vendor_name', 'price', 'quantity',
             'status', 'is_blocked', 'created_at'
         ]
