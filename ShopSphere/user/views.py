@@ -308,5 +308,5 @@ def delete_address(request, id):
 @permission_classes([IsAuthenticated])
 def logout_api(request):
     logout(request)
-    return redirect('login')
+    return redirect('user_login')
 
