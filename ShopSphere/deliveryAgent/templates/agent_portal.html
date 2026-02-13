@@ -154,11 +154,9 @@
     </div>
 
     <script>
-        /**
-         * Logic to handle form switching and persistence
-         */
+       
         document.addEventListener('DOMContentLoaded', function() {
-            // This variable is populated by your Django context
+            
             const activeTab = "{{ active_tab }}"; 
             if (activeTab === 'signup') {
                 toggleForm('signup');
@@ -177,7 +175,7 @@
                 signupForm.classList.remove('hidden');
                 portalTitle.innerText = "Join the Fleet";
                 
-                // Button States
+                
                 btnSignup.classList.add('brand-purple', 'text-white');
                 btnSignup.classList.remove('text-slate-400');
                 btnSignin.classList.remove('brand-purple', 'text-white');
@@ -187,7 +185,7 @@
                 signinForm.classList.remove('hidden');
                 portalTitle.innerText = "Partner Portal";
                 
-                // Button States
+                
                 btnSignin.classList.add('brand-purple', 'text-white');
                 btnSignin.classList.remove('text-slate-400');
                 btnSignup.classList.remove('brand-purple', 'text-white');

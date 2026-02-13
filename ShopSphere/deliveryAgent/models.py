@@ -8,7 +8,7 @@ class Agent(AbstractUser):
     company_name = models.CharField(max_length=100, blank=True, null=True)
     vehicle_type = models.CharField(max_length=20, blank=True, null=True)
 
-    # Overriding these to resolve clashes with default auth.User
+
     groups = models.ManyToManyField(
         Group,
         related_name="agent_groups",

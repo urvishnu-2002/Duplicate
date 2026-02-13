@@ -9,7 +9,7 @@
 </head>
 <body class="bg-gray-50 flex h-screen font-sans">
 
-    <!-- Sidebar -->
+    
     <aside class="w-64 bg-slate-900 text-white flex flex-col">
         <div class="p-6 flex items-center gap-2">
             <i class="fas fa-truck text-indigo-400"></i>
@@ -27,7 +27,7 @@
             </a>
         </nav>
         <div class="p-4 border-t border-slate-800">
-            <!-- Logged-in agent info -->
+            
             <div class="flex items-center gap-3 mb-4 px-2">
                 <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center font-bold">
                     {{ user.username|slice:":1"|upper }}
@@ -46,10 +46,10 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
+    
     <main class="flex-1 overflow-y-auto p-8">
 
-        <!-- Messages -->
+        
         {% if messages %}
         <div class="mb-4">
             {% for message in messages %}
@@ -64,13 +64,13 @@
         </div>
         {% endif %}
 
-        <!-- Header -->
+        
         <header class="mb-10">
             <h2 class="text-2xl font-bold text-gray-800">Welcome back, {{ user.username }}!</h2>
             <p class="text-gray-500">Pick up new orders and track your earnings.</p>
         </header>
 
-        <!-- Dashboard Stats -->
+        
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-start">
                 <div>
@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <!-- Available Orders -->
+        
         <section class="space-y-8 mb-12">
             <h4 class="text-lg font-bold text-gray-800 mb-6">Available Orders</h4>
             <div class="grid grid-cols-1 gap-6">
@@ -140,7 +140,7 @@
             </div>
         </section>
 
-        <!-- Recent Delivered Orders -->
+        
         <section class="space-y-8">
             <h4 class="text-lg font-bold text-gray-800 mb-4">Recent History</h4>
             <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
@@ -163,7 +163,7 @@
             </div>
         </section>
 
-        <!-- Dummy Agents Section -->
+        
         <section class="mt-12">
             <h4 class="text-lg font-bold text-gray-800 mb-6">Agent List (Dummy Data)</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

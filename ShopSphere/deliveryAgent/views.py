@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import AgentRegistrationForm
 from .models import Agent
 
-# ===== Dummy Agents =====
+
 DUMMY_AGENTS = [
     {'id': 1, 'username': 'agent_john', 'email': 'john@example.com'},
     {'id': 2, 'username': 'agent_sara', 'email': 'sara@example.com'},
@@ -15,7 +15,7 @@ DUMMY_AGENTS = [
     {'id': 5, 'username': 'agent_tom', 'email': 'tom@example.com'},
 ]
 
-# ===== Dummy Orders =====
+
 DUMMY_ORDERS = [
     {'id': 1, 'order_id': 'ORD-001', 'customer_name': 'John Doe', 'delivery_address': '123 Main Street, New York, NY 10001', 'earning': 10.00, 'status': 'AVAILABLE'},
     {'id': 2, 'order_id': 'ORD-002', 'customer_name': 'Jane Smith', 'delivery_address': '456 Oak Avenue, Brooklyn, NY 11201', 'earning': 12.50, 'status': 'AVAILABLE'},
@@ -29,9 +29,9 @@ DUMMY_ORDERS = [
     {'id': 10, 'order_id': 'ORD-010', 'customer_name': 'Olivia Martin', 'delivery_address': '444 Oak Lane, Manhattan, NY 10011', 'earning': 16.00, 'status': 'AVAILABLE'},
 ]
 
-# ===== Agent Portal View =====
+
 def agent_portal(request):
-    # If user is already logged in, redirect to dashboard
+    
     if request.user.is_authenticated:
         return redirect('delivery_dashboard')
 
@@ -81,19 +81,19 @@ def agent_portal(request):
     })
 
 
-# ===== Delivery Dashboard View =====
+
 @login_required
 def delivery_dashboard(request):
     if not isinstance(request.user, Agent):
         return redirect('agent_portal')
 
-    # Active orders for dashboard
+    
     active_order = next((o for o in DUMMY_ORDERS if o['status'] == 'AVAILABLE'), None)
 
-    # Recent delivered orders
+    
     recent_orders = [o for o in DUMMY_ORDERS if o['status'] == 'DELIVERED']
 
-    # Dashboard stats
+    
     total_earnings = sum(o['earning'] for o in recent_orders)
     completed_orders_count = len(recent_orders)
     available_orders_count = len([o for o in DUMMY_ORDERS if o['status'] == 'AVAILABLE'])
@@ -108,7 +108,7 @@ def delivery_dashboard(request):
     })
 
 
-# ===== Accept Order (Simulated for Dummy Data) =====
+
 @login_required
 def accept_order_sim(request, order_id):
     order = next((o for o in DUMMY_ORDERS if o['id'] == int(order_id)), None)
@@ -124,10 +124,10 @@ def accept_order_sim(request, order_id):
 
     return redirect('delivery_dashboard')
 
-# ===== Accept Order (Simulated for Dummy Data) =====
+
 @login_required
 def accept_order(request, order_id):
-    if request.method == 'POST':  # Ensure POST request
+    if request.method == 'POST':  
         order = next((o for o in DUMMY_ORDERS if o['id'] == int(order_id)), None)
 
         if order:
