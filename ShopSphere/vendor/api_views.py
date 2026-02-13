@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import VendorProfile, Product, ProductImage
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, LoginSerializer,
@@ -83,7 +84,6 @@ class VendorDetailsView(generics.GenericAPIView):
     
     def get(self, request, *args, **kwargs):
         """Render HTML form for vendor details"""
-        from django.shortcuts import render, redirect
         
         # Check if user is coming from registration (has vendor_user_id in session)
         vendor_user_id = request.session.get('vendor_user_id')
@@ -98,7 +98,6 @@ class VendorDetailsView(generics.GenericAPIView):
     
     def post(self, request, *args, **kwargs):
         """Process vendor details form submission"""
-        from django.shortcuts import redirect, render, get_object_or_404
         
         # Get user from session or from authenticated request
         vendor_user_id = request.session.get('vendor_user_id')
