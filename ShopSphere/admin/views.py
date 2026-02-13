@@ -4,8 +4,8 @@ from vendor.models import VendorProfile, Product
 
 
 def is_admin(user):
-    """Check if user is a superuser"""
-    return user.is_superuser
+    """Check if user is a superuser or staff member"""
+    return user.is_superuser or user.is_staff
 
 
 @user_passes_test(is_admin)
@@ -42,7 +42,7 @@ def admin_dashboard(request):
         'recent_products': recent_products,
     }
 
-    return render(request, 'adminapp/dashboard.html', context)
+    return render(request, 'dashboard.html', context)
 
 
 @user_passes_test(is_admin)
@@ -73,7 +73,7 @@ def vendor_list(request):
         'block_filter': block_filter,
     }
 
-    return render(request, 'adminapp/vendor_list.html', context)
+    return render(request, 'admin/vendor_list.html', context)
 
 
 @user_passes_test(is_admin)
@@ -90,7 +90,7 @@ def vendor_details(request, vendor_id):
         'approval_logs': approval_logs,
     }
 
-    return render(request, 'adminapp/vendor_details.html', context)
+    return render(request, 'admin/vendor_details.html', context)
 
 
 @user_passes_test(is_admin)
@@ -122,7 +122,7 @@ def product_list(request):
         'vendor_filter': vendor_filter,
     }
 
-    return render(request, 'adminapp/product_list.html', context)
+    return render(request, 'admin/product_list.html', context)
 
 
 @user_passes_test(is_admin)
@@ -136,4 +136,4 @@ def system_settings(request):
         'message': 'System settings page'
     }
 
-    return render(request, 'adminapp/system_settings.html', context)
+    return render(request, 'admin/system_settings.html', context)

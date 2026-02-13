@@ -137,12 +137,20 @@
     <div class="grid">
         {% for product in products %}
         <div class="card">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                style="height: 150px; width: 100%; object-fit: cover; border-radius: 10px; margin-bottom: 15px;">
+            {% else %}
             <div
                 style="height: 150px; background: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; font-size: 3em;">
                 📦
             </div>
+            {% endif %}
             <h3>{{ product.name }}</h3>
             <p class="price">${{ product.price }}</p>
+            <p
+                style="font-size: 0.9em; color: #ccc; margin-bottom: 15px; height: 3em; overflow: hidden; text-overflow: ellipsis;">
+                {{ product.description }}</p>
             <a href="{% url 'add_to_cart' product.id %}" class="btn">Add to Cart</a>
         </div>
         {% endfor %}

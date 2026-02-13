@@ -1,4 +1,3 @@
-
 try:
     with open('error_log.txt', 'r', encoding='utf-16le') as f:
         print("--- error_log.txt (last 20 lines) ---")
