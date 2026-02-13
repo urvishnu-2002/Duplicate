@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     # 'superAdmin',
     'user',
     # 'deliveryAgent',
+    'drf_spectacular',
 ]
 
 LOGIN_URL = 'login'
@@ -161,6 +162,16 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular Settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ShopSphere API',
+    'DESCRIPTION': 'API documentation for ShopSphere E-commerce Backend',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
 }
 
 # CORS Configuration for Frontend Integration

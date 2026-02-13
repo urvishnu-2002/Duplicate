@@ -9,7 +9,7 @@ from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartItemSerializer, OrderSerializer
 from .forms import AddressForm
 
-# 🔹 REGISTER
+
 @api_view(['GET', 'POST'])
 def register_api(request):
     if request.method == 'GET':
@@ -27,7 +27,7 @@ def register_api(request):
     print(f"DEBUG: Register Errors: {serializer.errors}")
     return Response(serializer.errors, status=400)
 
-# 🔹 LOGIN (JWT token generate)
+
 @api_view(['GET', 'POST'])
 def login_api(request):
     if request.method == 'GET':
@@ -37,7 +37,7 @@ def login_api(request):
     username = request.data.get('email') or request.data.get('username')
     password = request.data.get('password')
 
-    # If user provided an email, resolve to username
+
     if username and '@' in username:
         try:
             u = AuthUser.objects.get(email=username)
@@ -46,13 +46,13 @@ def login_api(request):
             username = None
     user = authenticate(username=username, password=password)
     if user:
-        # Use session login for HTML form submissions
+      
         login(request, user)
         
-        # For API/JSON clients, also return JWT tokens
+        
         refresh = RefreshToken.for_user(user)
         
-        # Check if it's HTML form submission vs JSON API
+        
         if request.accepted_renderer.format == 'json':
             return Response({
                 "access": str(refresh.access_token),
@@ -61,26 +61,26 @@ def login_api(request):
                 "role": user.role
             })
         else:
-            # HTML form: redirect to home
+            
             return redirect('home')
     return Response({"error": "Invalid credentials"}, status=401)
 
-# 🔹 HOME (Product Page)
+
 @api_view(['GET'])
 def home_api(request):
     products = Product.objects.all()
     
-    # API / JSON Response
+    
     if request.accepted_renderer.format == 'json':
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
         
-    # HTML Response
+    
     cart_count = 0
     if request.user.is_authenticated:
         try:
             cart = Cart.objects.get(user=request.user)
-            # Sum of quantities
+            
             cart_count = sum(item.quantity for item in cart.items.all())
         except Cart.DoesNotExist:
             pass
@@ -92,7 +92,7 @@ def home_api(request):
     })
 
 
-# 🔹 ADD TO CART
+
 @api_view(['GET', 'POST'])
 def add_to_cart(request, product_id):
     if not request.user.is_authenticated:
@@ -114,7 +114,7 @@ def add_to_cart(request, product_id):
     return redirect('home')
 
 
-# 🔹 VIEW CART
+
 @api_view(['GET'])
 def cart_view(request):
     if not request.user.is_authenticated:
@@ -136,7 +136,7 @@ def cart_view(request):
     })
 
 
-# 🔹 CHECKOUT
+
 @api_view(['GET'])
 def checkout_view(request):
     if not request.user.is_authenticated:
@@ -167,7 +167,7 @@ def checkout_view(request):
     })
 
 
-# 🔹 PROCESS PAYMENT
+
 @api_view(['POST'])
 def process_payment(request):
     if not request.user.is_authenticated:
@@ -180,7 +180,7 @@ def process_payment(request):
         print(f"DEBUG: Payment Error - Missing payment_mode. Data: {request.data}")
         return Response({"error": "Payment mode required"}, status=400)
 
-    # 1. Get items to order
+
     items_to_process = []
     
     if items_data:
@@ -206,8 +206,7 @@ def process_payment(request):
         print(f"DEBUG: Payment Error - No items to process.")
         return Response({"error": "No items to process"}, status=400)
 
-    # 2. Create ONE Order for the entire transaction
-    # Summary of items for the summary field
+    
     summary_str = ", ".join([f"{i.get('quantity')} x {i.get('name')}" for i in items_to_process])
 
     order = Order.objects.create(
@@ -217,7 +216,7 @@ def process_payment(request):
         item_names=summary_str
     )
 
-    # 3. Create all OrderItems linked to this one order
+    
     for item in items_to_process:
         OrderItem.objects.create(
             order=order,
@@ -233,7 +232,7 @@ def process_payment(request):
     }, status=201)
 
 
-# 🔹 MY ORDERS
+
 @api_view(['GET'])
 def my_orders(request):
     if not request.user.is_authenticated:
@@ -248,7 +247,7 @@ def my_orders(request):
         
     return render(request, "my_orders.html", {"orders": orders})
 
-# 🔹 LOGOUT
+
 @api_view(['POST', 'GET'])
 def logout_api(request):
     logout(request)
