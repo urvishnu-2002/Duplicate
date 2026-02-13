@@ -14,10 +14,7 @@ from .serializers import (
 
 User = get_user_model()
 
-
-
 class RegisterView(generics.CreateAPIView):
-    """Vendor registration endpoint"""
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     serializer_class = UserRegistrationSerializer
@@ -34,9 +31,7 @@ class RegisterView(generics.CreateAPIView):
             'email': user.email
         }, status=status.HTTP_201_CREATED)
 
-
 class LoginView(generics.GenericAPIView):
-    """Vendor login endpoint"""
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
     
@@ -54,10 +49,8 @@ class LoginView(generics.GenericAPIView):
                 'error': 'Invalid username or password'
             }, status=status.HTTP_401_UNAUTHORIZED)
         
-        # Get or create token
         token, created = Token.objects.get_or_create(user=user)
         
-        # Check if vendor profile exists
         vendor = VendorProfile.objects.filter(user=user).first()
         
         return Response({
@@ -75,20 +68,15 @@ class LoginView(generics.GenericAPIView):
             } if vendor else None
         }, status=status.HTTP_200_OK)
 
-
 class VendorDetailsView(generics.GenericAPIView):
-    """Submit vendor shop details - Returns HTML page"""
-    permission_classes = [AllowAny]  # Allow access for new vendors during registration
+    permission_classes = [AllowAny]
     serializer_class = VendorRegistrationSerializer
     
     def get(self, request, *args, **kwargs):
-        """Render HTML form for vendor details"""
         from django.shortcuts import render, redirect
         
-        # Check if user is coming from registration (has vendor_user_id in session)
         vendor_user_id = request.session.get('vendor_user_id')
         if not vendor_user_id:
-            # If authenticated via API token, use that user
             if request.user.is_authenticated:
                 return render(request, 'vendor/vendor_details.html')
             else:
@@ -97,10 +85,8 @@ class VendorDetailsView(generics.GenericAPIView):
         return render(request, 'vendor/vendor_details.html')
     
     def post(self, request, *args, **kwargs):
-        """Process vendor details form submission"""
         from django.shortcuts import redirect, render, get_object_or_404
         
-        # Get user from session or from authenticated request
         vendor_user_id = request.session.get('vendor_user_id')
         if vendor_user_id:
             user = get_object_or_404(User, id=vendor_user_id)
@@ -109,7 +95,6 @@ class VendorDetailsView(generics.GenericAPIView):
         else:
             return redirect('register')
         
-        # Check if vendor profile already exists
         vendor = VendorProfile.objects.filter(user=user).first()
         
         if vendor:
@@ -117,7 +102,6 @@ class VendorDetailsView(generics.GenericAPIView):
                 'error': 'Vendor profile already exists'
             })
         
-        # Create vendor profile from form data
         VendorProfile.objects.create(
             user=user,
             shop_name=request.POST.get('shop_name'),
@@ -130,16 +114,12 @@ class VendorDetailsView(generics.GenericAPIView):
             approval_status='pending'
         )
         
-        # Clear session data
         if 'vendor_user_id' in request.session:
             del request.session['vendor_user_id']
         
-        # Redirect to login after successful submission
         return redirect('login')
 
-
 class VendorDashboardView(generics.RetrieveAPIView):
-    """Get vendor dashboard information"""
     permission_classes = [IsAuthenticated]
     serializer_class = VendorProfileSerializer
     
@@ -164,9 +144,7 @@ class VendorDashboardView(generics.RetrieveAPIView):
             'blocked_products': products.filter(is_blocked=True).count(),
         }, status=status.HTTP_200_OK)
 
-
 class VendorProfileDetailView(generics.RetrieveUpdateAPIView):
-    """Get or update vendor profile"""
     permission_classes = [IsAuthenticated]
     serializer_class = VendorProfileSerializer
     
@@ -182,9 +160,7 @@ class VendorProfileDetailView(generics.RetrieveUpdateAPIView):
                 'error': 'Vendor profile not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
-
 class ProductViewSet(viewsets.ModelViewSet):
-    """CRUD operations for products"""
     permission_classes = [IsAuthenticated]
     queryset = Product.objects.all()
     
@@ -233,12 +209,10 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         queryset = self.get_queryset()
         
-        # Filter by status if provided
         status_filter = request.query_params.get('status', None)
         if status_filter:
             queryset = queryset.filter(status=status_filter)
         
-        # Search by name or description
         search = request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
@@ -263,28 +237,23 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def approved(self, request):
-        """Get only approved products"""
         queryset = self.get_queryset().filter(status='approved')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def pending(self, request):
-        """Get only pending products"""
         queryset = self.get_queryset().filter(status='pending')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def blocked(self, request):
-        """Get only blocked products"""
         queryset = self.get_queryset().filter(is_blocked=True)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
 class ApprovalStatusView(generics.RetrieveAPIView):
-    """Get vendor approval status"""
     permission_classes = [IsAuthenticated]
     serializer_class = VendorProfileSerializer
     
@@ -305,9 +274,7 @@ class ApprovalStatusView(generics.RetrieveAPIView):
                 'error': 'Vendor profile not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
-
 class UserProfileView(generics.RetrieveUpdateAPIView):
-    """Get or update current user profile"""
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
     

@@ -4,9 +4,7 @@ User = get_user_model()
 from vendor.models import VendorProfile, Product
 from .models import VendorApprovalLog, ProductApprovalLog
 
-
 class VendorApprovalLogSerializer(serializers.ModelSerializer):
-    """Serializer for VendorApprovalLog model"""
     admin_user_name = serializers.CharField(source='admin_user.username', read_only=True)
     action_display = serializers.CharField(source='get_action_display', read_only=True)
     
@@ -18,9 +16,7 @@ class VendorApprovalLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'admin_user', 'timestamp']
 
-
 class ProductApprovalLogSerializer(serializers.ModelSerializer):
-    """Serializer for ProductApprovalLog model"""
     admin_user_name = serializers.CharField(source='admin_user.username', read_only=True)
     action_display = serializers.CharField(source='get_action_display', read_only=True)
     
@@ -32,9 +28,7 @@ class ProductApprovalLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'admin_user', 'timestamp']
 
-
 class AdminVendorDetailSerializer(serializers.ModelSerializer):
-    """Serializer for admin vendor details view"""
     user_email = serializers.CharField(source='user.email', read_only=True)
     user_username = serializers.CharField(source='user.username', read_only=True)
     approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
@@ -49,9 +43,7 @@ class AdminVendorDetailSerializer(serializers.ModelSerializer):
             'is_blocked', 'blocked_reason', 'created_at', 'approval_logs'
         ]
 
-
 class AdminProductDetailSerializer(serializers.ModelSerializer):
-    """Serializer for admin product details view"""
     vendor_shop_name = serializers.CharField(source='vendor.shop_name', read_only=True)
     vendor_owner = serializers.CharField(source='vendor.user.username', read_only=True)
     approval_logs = ProductApprovalLogSerializer(source='approval_logs.all', many=True, read_only=True)
@@ -64,9 +56,7 @@ class AdminProductDetailSerializer(serializers.ModelSerializer):
             'is_blocked', 'blocked_reason', 'created_at', 'approval_logs'
         ]
 
-
 class AdminVendorListSerializer(serializers.ModelSerializer):
-    """Serializer for admin vendor list view"""
     user_email = serializers.CharField(source='user.email', read_only=True)
     approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
     
@@ -77,9 +67,7 @@ class AdminVendorListSerializer(serializers.ModelSerializer):
             'approval_status_display', 'is_blocked', 'created_at'
         ]
 
-
 class AdminProductListSerializer(serializers.ModelSerializer):
-    """Serializer for admin product list view"""
     vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
     
     class Meta:
@@ -89,32 +77,20 @@ class AdminProductListSerializer(serializers.ModelSerializer):
             'is_blocked', 'created_at'
         ]
 
-
 class ApproveVendorSerializer(serializers.Serializer):
-    """Serializer for approving vendor"""
     reason = serializers.CharField(required=False, allow_blank=True)
-
 
 class RejectVendorSerializer(serializers.Serializer):
-    """Serializer for rejecting vendor"""
     reason = serializers.CharField()
-
 
 class BlockVendorSerializer(serializers.Serializer):
-    """Serializer for blocking vendor"""
     reason = serializers.CharField()
-
 
 class UnblockVendorSerializer(serializers.Serializer):
-    """Serializer for unblocking vendor"""
     reason = serializers.CharField(required=False, allow_blank=True)
 
-
 class BlockProductSerializer(serializers.Serializer):
-    """Serializer for blocking product"""
     reason = serializers.CharField()
 
-
 class UnblockProductSerializer(serializers.Serializer):
-    """Serializer for unblocking product"""
     reason = serializers.CharField(required=False, allow_blank=True)

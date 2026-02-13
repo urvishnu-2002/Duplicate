@@ -1,7 +1,6 @@
 from django.contrib import admin
 from .models import VendorProfile, Product
 
-
 @admin.register(VendorProfile)
 class VendorProfileAdmin(admin.ModelAdmin):
     list_display = ('shop_name', 'user', 'approval_status', 'gst_number', 'pan_number', 'bank_account_number', 'created_at')
@@ -23,7 +22,6 @@ class VendorProfileAdmin(admin.ModelAdmin):
             'fields': ('is_blocked', 'blocked_reason', 'created_at', 'updated_at')
         }),
     )
-
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):

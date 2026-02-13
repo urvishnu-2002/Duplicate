@@ -1,6 +1,3 @@
-from django.shortcuts import render
-
-# Create your views here.
 import random
 from django.core.mail import send_mail
 from django.conf import settings
@@ -17,11 +14,6 @@ from django.db import transaction
 
 User = get_user_model()
 
-
-# ============================================================================
-# AUTHENTICATION VIEWS - VENDOR REGISTRATION AND LOGIN
-# ============================================================================
-
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -29,25 +21,21 @@ def register_view(request):
     if request.method == "GET":
         return render(request, 'register.html')
 
-    # Detect if it's a JSON request (from frontend)
     is_json = 'application/json' in request.headers.get('Accept', '') or \
               'application/json' in request.headers.get('Content-Type', '')
 
-    # Use request.data for DRF/JSON, or request.POST for traditional forms
     data = request.data if is_json else request.POST
     
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
 
-    # Validation for new users
     if not request.user.is_authenticated:
         if not (username and email and password):
             if is_json:
                 return Response({'error': 'Username, email, and password are required for new users'}, status=400)
             return render(request, 'register.html', {'error': 'Required fields missing'})
         
-        # Check if user already exists
         if User.objects.filter(username=username).exists():
             if is_json: return Response({'error': 'Username already exists'}, status=400)
             return render(request, 'register.html', {'error': 'Username already exists'})
@@ -56,11 +44,9 @@ def register_view(request):
             if is_json: return Response({'error': 'Email already exists'}, status=400)
             return render(request, 'register.html', {'error': 'Email already exists'})
 
-    # If it's the NEW full registration flow from BankDetails.jsx (Atomic Registration)
     if is_json and data.get('bank_account_number'):
         try:
             with transaction.atomic():
-                # Get or Create User
                 if request.user.is_authenticated:
                     user = request.user
                 else:
@@ -71,11 +57,9 @@ def register_view(request):
                     )
                     print(f"DEBUG: Created new user {user.email} for atomic vendor registration.")
 
-                # Check if they already have a vendor profile
                 if VendorProfile.objects.filter(user=user).exists():
                     return Response({'error': 'You already have a vendor profile or a pending request.'}, status=400)
                 
-                # Create the vendor profile with all registration data
                 VendorProfile.objects.create(
                     user=user,
                     shop_name=data.get('shop_name', data.get('storeName', '')),
@@ -100,7 +84,6 @@ def register_view(request):
             print(f"DEBUG: Error during vendor registration: {str(e)}")
             return Response({'error': str(e)}, status=500)
 
-    # LEGACY / OTP FLOW
     otp = random.randint(100000, 999999)
     request.session['reg_data'] = {
         'username': username,
@@ -124,9 +107,7 @@ def register_view(request):
         return Response({'success': True, 'message': 'OTP sent to email', 'otp_required': True})
     return redirect('verify_otp')
 
-
 def verify_otp_view(request):
-    """Verify OTP and create user account"""
     if request.method == "POST":
         entered_otp = request.POST.get('otp')
         reg_data = request.session.get('reg_data')
@@ -137,7 +118,6 @@ def verify_otp_view(request):
             })
 
         if str(reg_data['otp']) == entered_otp:
-            # Create user
             user = User.objects.create_user(
                 username=reg_data['username'],
                 email=reg_data['email'],
@@ -157,9 +137,7 @@ def verify_otp_view(request):
 
     return render(request, 'verify_otp.html')
 
-
 def vendor_details_view(request):
-    """Vendor submits shop details to complete registration"""
     user_id = request.session.get('vendor_user_id')
     
     if not user_id:
@@ -185,17 +163,13 @@ def vendor_details_view(request):
 
     return render(request, 'vendor_details.html')
 
-
 def login_view(request):
-    """Vendor login"""
     if request.method == "POST":
         username_or_email = request.POST.get('username')
         password = request.POST.get('password')
 
-        # First try authentication with the provided identifier as email (since it's the USERNAME_FIELD)
         user = authenticate(request, username=username_or_email, password=password)
 
-        # If that fails, try to find a user with that username and use their email to authenticate
         if not user:
             try:
                 temp_user = User.objects.get(username=username_or_email)
@@ -213,36 +187,22 @@ def login_view(request):
 
     return render(request, 'login.html')
 
-
 def logout_view(request):
-    """Vendor logout"""
     logout(request)
     return redirect('login')
 
-
-# ============================================================================
-# VENDOR DASHBOARD - APPROVAL STATUS AND PRODUCT MANAGEMENT
-# ============================================================================
-
 @login_required(login_url='login')
 def vendor_home_view(request):
-    """
-    Vendor home page with approval status.
-    If not approved, show status (pending/rejected).
-    If approved, show vendor dashboard.
-    """
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
         return redirect('login')
 
-    # Check if vendor is blocked
     if vendor.is_blocked:
         return render(request, 'vendor_blocked.html', {
             'vendor': vendor
         })
 
-    # If not approved, show status page
     if vendor.approval_status != 'approved':
         return render(request, 'approval_status.html', {
             'vendor': vendor,
@@ -250,20 +210,14 @@ def vendor_home_view(request):
             'rejection_reason': vendor.rejection_reason
         })
 
-    # If approved, show products dashboard
     products = vendor.products.all()
     return render(request, 'vendor_dashboard.html', {
         'vendor': vendor,
         'products': products
     })
 
-
 @login_required(login_url='login')
 def approval_status_view(request):
-    """
-    Show approval status page.
-    Accessible only when not approved.
-    """
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
@@ -278,20 +232,13 @@ def approval_status_view(request):
         'rejection_reason': vendor.rejection_reason
     })
 
-
-# ============================================================================
-# PRODUCT MANAGEMENT - VENDOR SIDE
-# ============================================================================
-
 @login_required(login_url='login')
 def add_product_view(request):
-    """Add new product to vendor's store"""
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
         return redirect('login')
 
-    # Check approval
     if vendor.approval_status != 'approved':
         return redirect('approval_status')
 
@@ -311,10 +258,8 @@ def add_product_view(request):
         'vendor': vendor
     })
 
-
 @login_required(login_url='login')
 def edit_product_view(request, product_id):
-    """Edit product details"""
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
@@ -340,10 +285,8 @@ def edit_product_view(request, product_id):
         'product': product
     })
 
-
 @login_required(login_url='login')
 def delete_product_view(request, product_id):
-    """Delete product"""
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:
@@ -356,10 +299,8 @@ def delete_product_view(request, product_id):
     product.delete()
     return redirect('vendor_home')
 
-
 @login_required(login_url='login')
 def view_product_view(request, product_id):
-    """View product details"""
     try:
         vendor = request.user.vendor_profile
     except VendorProfile.DoesNotExist:

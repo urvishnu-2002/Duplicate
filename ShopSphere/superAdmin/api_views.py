@@ -16,11 +16,9 @@ from .serializers import (
     BlockProductSerializer, UnblockProductSerializer
 )
 
-
 class AdminLoginRequiredMixin:
     """Ensure user is admin"""
     permission_classes = [IsAuthenticated, IsAdminUser]
-
 
 class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     """Manage vendor approval requests"""
@@ -31,7 +29,6 @@ class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = VendorProfile.objects.filter(approval_status='pending')
         
-        # Search by shop name or owner email
         search = request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
@@ -44,7 +41,6 @@ class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
-        """Approve a vendor"""
         vendor = self.get_object()
         
         if vendor.approval_status != 'pending':
@@ -55,11 +51,9 @@ class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
         serializer = ApproveVendorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # Update vendor status
         vendor.approval_status = 'approved'
         vendor.save()
         
-        # Log the action
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -74,7 +68,6 @@ class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        """Reject a vendor"""
         vendor = self.get_object()
         
         if vendor.approval_status != 'pending':
@@ -85,12 +78,10 @@ class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
         serializer = RejectVendorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # Update vendor status
         vendor.approval_status = 'rejected'
         vendor.rejection_reason = serializer.validated_data['reason']
         vendor.save()
         
-        # Log the action
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -103,9 +94,7 @@ class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
             'vendor': AdminVendorDetailSerializer(vendor).data
         })
 
-
 class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
-    """Manage all vendors"""
     queryset = VendorProfile.objects.exclude(approval_status='pending')
     serializer_class = AdminVendorListSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -113,12 +102,10 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = VendorProfile.objects.all()
         
-        # Filter by status
         status_filter = request.query_params.get('status', None)
         if status_filter:
             queryset = queryset.filter(approval_status=status_filter)
         
-        # Search by shop name or owner email
         search = request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
@@ -127,7 +114,6 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
                 Q(user__username__icontains=search)
             )
         
-        # Filter by blocked status
         blocked_filter = request.query_params.get('blocked', None)
         if blocked_filter == 'true':
             queryset = queryset.filter(is_blocked=True)
@@ -139,14 +125,12 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def detail(self, request, pk=None):
-        """Get detailed vendor information"""
         vendor = self.get_object()
         serializer = AdminVendorDetailSerializer(vendor)
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
     def block(self, request, pk=None):
-        """Block a vendor"""
         vendor = self.get_object()
         
         serializer = BlockVendorSerializer(data=request.data)
@@ -156,10 +140,8 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
         vendor.blocked_reason = serializer.validated_data['reason']
         vendor.save()
         
-        # Block all vendor's products
         Product.objects.filter(vendor=vendor).update(is_blocked=True)
         
-        # Log the action
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -174,7 +156,6 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def unblock(self, request, pk=None):
-        """Unblock a vendor"""
         vendor = self.get_object()
         
         serializer = UnblockVendorSerializer(data=request.data)
@@ -184,7 +165,6 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
         vendor.blocked_reason = ''
         vendor.save()
         
-        # Log the action
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -197,9 +177,7 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
             'vendor': AdminVendorDetailSerializer(vendor).data
         })
 
-
 class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
-    """Manage all products"""
     queryset = Product.objects.all()
     serializer_class = AdminProductListSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -207,19 +185,16 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = Product.objects.all()
         
-        # Filter by status
         status_filter = request.query_params.get('status', None)
         if status_filter:
             queryset = queryset.filter(status=status_filter)
         
-        # Filter by blocked status
         blocked_filter = request.query_params.get('blocked', None)
         if blocked_filter == 'true':
             queryset = queryset.filter(is_blocked=True)
         elif blocked_filter == 'false':
             queryset = queryset.filter(is_blocked=False)
         
-        # Search by product name
         search = request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
@@ -227,7 +202,6 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
                 Q(vendor__shop_name__icontains=search)
             )
         
-        # Filter by vendor
         vendor_id = request.query_params.get('vendor_id', None)
         if vendor_id:
             queryset = queryset.filter(vendor_id=vendor_id)
@@ -237,14 +211,12 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def detail(self, request, pk=None):
-        """Get detailed product information"""
         product = self.get_object()
         serializer = AdminProductDetailSerializer(product)
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
     def block(self, request, pk=None):
-        """Block a product"""
         product = self.get_object()
         
         serializer = BlockProductSerializer(data=request.data)
@@ -254,7 +226,6 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
         product.blocked_reason = serializer.validated_data['reason']
         product.save()
         
-        # Log the action
         ProductApprovalLog.objects.create(
             product=product,
             admin_user=request.user,
@@ -269,7 +240,6 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def unblock(self, request, pk=None):
-        """Unblock a product"""
         product = self.get_object()
         
         serializer = UnblockProductSerializer(data=request.data)
@@ -279,7 +249,6 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
         product.blocked_reason = ''
         product.save()
         
-        # Log the action
         ProductApprovalLog.objects.create(
             product=product,
             admin_user=request.user,
@@ -294,7 +263,6 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
 
 
 class DashboardView(AdminLoginRequiredMixin, generics.GenericAPIView):
-    """Admin dashboard statistics"""
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):

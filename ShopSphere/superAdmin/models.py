@@ -3,12 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from vendor.models import VendorProfile, Product
 
-
 class VendorApprovalLog(models.Model):
-    """
-    Log for tracking vendor approval/rejection actions and admin notes.
-    Keeps auditable record of admin decisions.
-    """
     
     ACTION_CHOICES = [
         ('approved', 'Approved'),
@@ -30,12 +25,7 @@ class VendorApprovalLog(models.Model):
     def __str__(self):
         return f"{self.vendor.shop_name} - {self.action} by {self.admin_user.username if self.admin_user else 'System'}"
 
-
 class ProductApprovalLog(models.Model):
-    """
-    Log for tracking product blocking/unblocking actions.
-    Keeps auditable record of admin decisions on products.
-    """
     
     ACTION_CHOICES = [
         ('blocked', 'Blocked'),

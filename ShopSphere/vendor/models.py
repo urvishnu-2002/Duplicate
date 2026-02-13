@@ -2,9 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
-class VendorProfile(models.Model):
-    """Vendor Profile Model for vendor registration and management"""
-    
+class VendorProfile(models.Model):    
     BUSINESS_CHOICES = [
         ('retail', 'Retail'),
         ('wholesale', 'Wholesale'),
@@ -29,12 +27,10 @@ class VendorProfile(models.Model):
     address = models.TextField() 
     business_type = models.CharField(max_length=20, choices=BUSINESS_CHOICES)
     
-    # Legacy fields (kept for backward compatibility)
     id_type = models.CharField(max_length=10, choices=ID_PROOF_CHOICES, blank=True, null=True)
     id_number = models.CharField(max_length=50, blank=True, null=True)
     id_proof_file = models.FileField(upload_to='vendor_docs/', blank=True, null=True)
     
-    # New GST/PAN fields
     gst_number = models.CharField(max_length=15, blank=True, null=True, help_text="15-digit GST number")
     pan_number = models.CharField(max_length=10, blank=True, null=True, help_text="10-character PAN number")
     pan_name = models.CharField(max_length=100, blank=True, null=True, help_text="Name as per PAN card")
@@ -47,12 +43,10 @@ class VendorProfile(models.Model):
     is_blocked = models.BooleanField(default=False)
     blocked_reason = models.TextField(blank=True, null=True)
     
-    # Bank Details
     bank_holder_name = models.CharField(max_length=100, blank=True, null=True)
     bank_account_number = models.CharField(max_length=20, blank=True, null=True)
     bank_ifsc_code = models.CharField(max_length=11, blank=True, null=True)
     
-    # Shipping Preferences
     shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     class Meta:
@@ -63,12 +57,10 @@ class VendorProfile(models.Model):
     
     @property
     def is_approved(self):
-        """Property for backward compatibility"""
         return self.approval_status == 'approved'
 
 
 class Product(models.Model):
-    """Product Model for vendor products"""
     
     STATUS_CHOICES = [
         ('active', 'Active'),
