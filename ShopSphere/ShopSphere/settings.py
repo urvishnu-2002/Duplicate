@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-
+    
     'rest_framework.authtoken',
     'corsheaders',
     # 'vendor',
@@ -126,7 +126,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # Disable automatic trailing slash append
-APPEND_SLASH = False
+APPEND_SLASH = True
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -160,8 +161,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+]
 
-],
 
 # Custom User Model
 AUTH_USER_MODEL = 'user.AuthUser'
@@ -196,3 +197,4 @@ SIMPLE_JWT = {
 # Optional: static files folder
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+LOGIN_URL = '/login/'

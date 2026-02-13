@@ -12,6 +12,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = AuthUser.objects.create_user(**validated_data)
         return user
 
+
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -29,7 +30,7 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ['id', 'user', 'payment_mode', 'transaction_id', 'item_names', 'order_date', 'items']
+        fields = '__all__'
 
 
 class CartItemSerializer(serializers.ModelSerializer):
