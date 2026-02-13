@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
 from .models import VendorProfile, Product, ProductImage
+from django.shortcuts import render, redirect
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, LoginSerializer,
     VendorProfileSerializer, VendorRegistrationSerializer,
@@ -83,7 +84,7 @@ class VendorDetailsView(generics.GenericAPIView):
     
     def get(self, request, *args, **kwargs):
         """Render HTML form for vendor details"""
-        from django.shortcuts import render, redirect
+       
         
         # Check if user is coming from registration (has vendor_user_id in session)
         vendor_user_id = request.session.get('vendor_user_id')

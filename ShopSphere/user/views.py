@@ -78,7 +78,7 @@ from vendor.models import Product as VendorProduct
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def home_api(request):
     products = VendorProduct.objects.all()
     
