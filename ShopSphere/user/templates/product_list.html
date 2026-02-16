@@ -137,8 +137,8 @@
     <div class="grid">
         {% for product in products %}
         <div class="card">
-            {% if product.image %}
-            <img src="{{ product.image.url }}" alt="{{ product.name }}"
+            {% if product.images.exists %}
+            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}"
                 style="height: 150px; width: 100%; object-fit: cover; border-radius: 10px; margin-bottom: 15px;">
             {% else %}
             <div
