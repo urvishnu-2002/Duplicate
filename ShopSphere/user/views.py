@@ -311,4 +311,3 @@ def delete_address(request, id):
 def logout_api(request):
     logout(request)
     return redirect('user_login')
-
