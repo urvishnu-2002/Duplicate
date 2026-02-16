@@ -308,7 +308,7 @@ class DeliveryCommission(models.Model):
         ('failed', 'Failed'),
     ]
     
-    agent = models.ForeignKey(DeliveryAgentProfile, on_delete=models.CASCADE, related_name='commissions')
+    agent = models.ForeignKey(DeliveryAgentProfile, on_delete=models.CASCADE, related_name='delivery_commissions')
     delivery_assignment = models.ForeignKey(DeliveryAssignment, on_delete=models.SET_NULL, null=True, blank=True, related_name='commission')
     
     # Commission Details

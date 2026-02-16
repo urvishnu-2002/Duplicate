@@ -13,11 +13,7 @@ class AuthUser(AbstractUser):
     ROLE_CHOICES = [
         ('customer', 'Customer'),
         ('vendor', 'Vendor'),
-<<<<<<< HEAD
-        ('delivery_agent', 'Delivery Agent'),
-=======
         ('delivery', 'Delivery Agent'),
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
     
@@ -425,7 +421,7 @@ class OrderReturn(models.Model):
     ]
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='returns')
-    order_item = models.OneToOneField(OrderItem, on_delete=models.CASCADE, related_name='return')
+    order_item = models.OneToOneField(OrderItem, on_delete=models.CASCADE, related_name='order_return')
     user = models.ForeignKey(AuthUser, on_delete=models.CASCADE, related_name='returns')
     
     reason = models.CharField(max_length=50, choices=RETURN_REASON_CHOICES)

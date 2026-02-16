@@ -4,20 +4,12 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
-<<<<<<< HEAD
 from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
 from .forms import AddressForm
 from django.contrib.auth.decorators import login_required
 from decimal import Decimal
 from vendor.models import Product
-=======
-from django.contrib.auth.decorators import login_required
-from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
-from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
-from .forms import AddressForm
-from vendor.models import Product as VendorProduct
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
@@ -72,21 +64,12 @@ def login_api(request):
         else:
             return redirect('home')
 
-<<<<<<< HEAD
     return Response({"error": "Invalid credentials"}, status=401)
 
-=======
-    if request.accepted_renderer.format == 'json':
-        return Response({"error": "Invalid credentials"}, status=401)
-    return render(request, "user_login.html", {"error": "Invalid credentials"})
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
-<<<<<<< HEAD
 #permission_classes([IsAuthenticated])
-=======
->>>>>>> subham
 def home_api(request):
     products = Product.objects.all()
     
@@ -206,20 +189,13 @@ def process_payment(request):
     items_from_request = request.data.get('items')
 
     if not payment_mode:
-<<<<<<< HEAD
         print(f"DEBUG: Payment Error - Missing payment_mode. Data: {request.data}")
         return Response({"error": "Payment mode required"}, status=400)
-=======
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Payment mode required"}, status=400)
-        return redirect('checkout')
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
 
     order = None
 
     # CASE 1: Items passed directly (e.g. from frontend state)
     if items_from_request:
-<<<<<<< HEAD
         summary_items = []
         total_amount = Decimal('0.00')
         
@@ -230,9 +206,6 @@ def process_payment(request):
             summary_items.append(f"{quantity} x {name}")
             total_amount += price * quantity
             
-=======
-        summary_items = [f"{i.get('quantity', 1)} x {i.get('name')}" for i in items_from_request]
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
         item_names_str = ", ".join(summary_items)
         
         try:
@@ -254,7 +227,6 @@ def process_payment(request):
             Cart.objects.filter(user=request.user).delete()
         except Exception as e:
              return Response({"error": f"Database Error: {str(e)}"}, status=500)
-<<<<<<< HEAD
         
         # Create OrderItems
         for item_data in items_from_request:
@@ -273,8 +245,6 @@ def process_payment(request):
              Cart.objects.filter(user=request.user).delete()
         except:
              pass
-=======
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
             
     # CASE 2: Use items from the database cart
     else:
@@ -286,7 +256,6 @@ def process_payment(request):
                     return Response({"error": "Cart is empty"}, status=400)
                 return redirect('cart')
 
-<<<<<<< HEAD
             # Build summary string
             summary_items = []
             total_amount = Decimal('0.00')
@@ -308,17 +277,6 @@ def process_payment(request):
                 )
             except Exception as e:
                 return Response({"error": f"Database Error: {str(e)}"}, status=500)
-=======
-            summary_items = [f"{item.quantity} x {item.product.name}" for item in cart_items]
-            item_names_str = ", ".join(summary_items)
-
-            order = Order.objects.create(
-                user=request.user,
-                payment_mode=payment_mode,
-                transaction_id=transaction_id,
-                item_names=item_names_str
-            )
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1
 
             for item in cart_items:
                 OrderItem.objects.create(
@@ -394,9 +352,4 @@ def delete_address(request, id):
 @permission_classes([IsAuthenticated])
 def logout_api(request):
     logout(request)
-<<<<<<< HEAD
     return redirect('login')
-=======
-    return redirect('user_login')
-
->>>>>>> 01bfc4536ca3caca702772248053c1e6622a92a1

@@ -317,13 +317,9 @@ def add_product_view(request):
             category=category,
             price=request.POST.get('price'),
             quantity=request.POST.get('quantity'),
-<<<<<<< HEAD
             image=request.FILES.get('image'),
             status='active',
            
-=======
-            status='active'
->>>>>>> d48bb74d11f49f1302083b5872e5cf5a4d032fc1
         )
 
         # ✅ Save Images
