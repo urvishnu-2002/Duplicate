@@ -12,18 +12,21 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = AuthUser.objects.create_user(**validated_data)
         return user
 
-from vendor.models import Product as VendorProduct
+from vendor.models import Product as VendorProduct, ProductImage
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'uploaded_at']
 
 class ProductSerializer(serializers.ModelSerializer):
-    category = serializers.SerializerMethodField()
-
+    images = ProductImageSerializer(many=True, read_only=True)
     class Meta:
         model = VendorProduct
-        fields = '__all__'
-
-    def get_category(self, obj):
-        # Default category to ensure visible in frontend filtering
-        return "Electronics"
+        fields = [
+            'id', 'name', 'description', 'category', 'price', 
+            'quantity', 'images', 'status', 'is_blocked', 'created_at'
+        ]
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
