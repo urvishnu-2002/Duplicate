@@ -65,3 +65,11 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_cart_price(self, obj):
         return sum(item.total_price() for item in obj.items.all())
+
+
+from .models import Address
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['id', 'name', 'phone', 'pincode', 'address', 'city', 'state']

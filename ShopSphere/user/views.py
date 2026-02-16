@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
-from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
+from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer, AddressSerializer
 from .forms import AddressForm
 from vendor.models import Product as VendorProduct
 
@@ -276,34 +276,31 @@ def my_orders(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def address_page(request):
-    if not request.user.is_authenticated:
-        return redirect('user_login')
-    
     if request.method == 'POST':
-        # Handles both request.data (DRF) and request.POST (Django)
-        data = request.data if hasattr(request, 'data') else request.POST
-        form = AddressForm(data)
-        if form.is_valid():
-            address = form.save(commit=False)
-            address.user = request.user
-            address.save()
-            return redirect('address_page')
+        serializer = AddressSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response({
+                "message": "Address saved successfully",
+                "address": serializer.data
+            }, status=201)
+        return Response(serializer.errors, status=400)
     
     addresses = Address.objects.filter(user=request.user)
-    form = AddressForm()
+    serializer = AddressSerializer(addresses, many=True)
     
     if request.accepted_renderer.format == 'json':
-        return Response({"addresses": list(addresses.values())})
+        return Response({"addresses": serializer.data})
         
-    return render(request, "address.html", {"addresses": addresses, "form": form})
+    return render(request, "address.html", {"addresses": addresses})
 
-@api_view(['POST', 'GET'])
+@api_view(['POST', 'GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_address(request, id):
-    if not request.user.is_authenticated:
-        return redirect('login')
     address = get_object_or_404(Address, id=id, user=request.user)
     address.delete()
+    if request.accepted_renderer.format == 'json':
+        return Response({"message": "Address deleted successfully"})
     return redirect('address_page')
 
 @api_view(['POST', 'GET'])
