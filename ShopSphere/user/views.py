@@ -4,15 +4,12 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
-from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
-from .forms import AddressForm
 from django.contrib.auth.decorators import login_required
 from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
 from .forms import AddressForm
+from vendor.models import Product as VendorProduct
 
-# 🔹 REGISTER
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def register_api(request):
@@ -24,14 +21,12 @@ def register_api(request):
         serializer.save()
         if request.accepted_renderer.format == 'json':
             return Response({"message": "User registered successfully"}, status=201)
-        return redirect('login')
+        return redirect('user_login')
 
     if request.accepted_renderer.format == 'json':
         return Response(serializer.errors, status=400)
     return render(request, "user_register.html", {"error": serializer.errors})
 
-
-# 🔹 LOGIN (JWT token generate)
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def login_api(request):
@@ -55,10 +50,7 @@ def login_api(request):
     user = authenticate(username=auth_identifier, password=password)
 
     if user:
-        # Use session login for HTML form submissions
         login(request, user)
-        
-        # For API/JSON clients, also return JWT tokens
         refresh = RefreshToken.for_user(user)
         
         if request.accepted_renderer.format == 'json':
@@ -71,23 +63,23 @@ def login_api(request):
         else:
             return redirect('home')
 
-    return Response({"error": "Invalid credentials"}, status=401)
-
-
-from vendor.models import Product as VendorProduct
+    if request.accepted_renderer.format == 'json':
+        return Response({"error": "Invalid credentials"}, status=401)
+    return render(request, "user_login.html", {"error": "Invalid credentials"})
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
+<<<<<<< HEAD
 #permission_classes([IsAuthenticated])
+=======
+>>>>>>> subham
 def home_api(request):
     products = VendorProduct.objects.all()
     
-    # API / JSON Response
-    if 'application/json' in request.headers.get('Accept', '') or request.accepted_renderer.format == 'json':
+    if request.accepted_renderer.format == 'json':
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
-        
-    # HTML Response
+    
     cart_count = 0
     if request.user.is_authenticated:
         try:
@@ -102,15 +94,43 @@ def home_api(request):
         "user": request.user
     })
 
+def get_product(request):
+    products = VendorProduct.objects.all()
+    cart_count = 0
+    if request.user.is_authenticated:
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart_count = sum(item.quantity for item in cart.items.all())
+        except Cart.DoesNotExist:
+            pass
+            
+    return render(request, "product_list.html", {
+        "products": products, 
+        "cart_count": cart_count,
+        "user": request.user
+    })
 
-# 🔹 ADD TO CART
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
+    # Depending on your Product model, you might need to import VendorProduct or use the local Product.
+    # Looking at home_api, it displays VendorProduct.
+    product = get_object_or_404(VendorProduct, id=product_id)
     cart, created = Cart.objects.get_or_create(user=request.user)
     
-    cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product)
+    # We need to map VendorProduct to our local Product model if they are different, 
+    # OR the CartItem should point to VendorProduct.
+    # Checking user/models.py: CartItem points to 'Product' which has name and price.
+    # If VendorProduct and Product are separate tables, this might fail.
+    # Let's assume you want to add the VendorProduct.
+    
+    # Fallback to local Product if thats what CartItem expects
+    local_product, lp_created = Product.objects.get_or_create(
+        name=product.name,
+        defaults={'price': product.price}
+    )
+    
+    cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=local_product)
     
     if not item_created:
         cart_item.quantity += 1
@@ -121,8 +141,6 @@ def add_to_cart(request, product_id):
         
     return redirect('home')
 
-
-# 🔹 VIEW CART
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def cart_view(request):
@@ -140,8 +158,6 @@ def cart_view(request):
         "total_cart_price": total_price
     })
 
-
-# 🔹 CHECKOUT
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def checkout_view(request):
@@ -168,56 +184,25 @@ def checkout_view(request):
         "items_count": items_count
     })
 
-
-# 🔹 PROCESS PAYMENT
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def process_payment(request):
-    if not request.user.is_authenticated:
-        return Response({"error": "Authentication required"}, status=401)
-        
     payment_mode = request.data.get('payment_mode')
     transaction_id = request.data.get('transaction_id')
     items_from_request = request.data.get('items')
 
-    # Add timestamp to transaction_id to ensure uniqueness for retries if needed, 
-    # BUT better to rely on frontend sending unique IDs or handling it.
-    # However, to fix the specific error 500 which is due to trying to create MULTIPLE Orders 
-    # with the SAME transaction_id (Unique Constraint Violation), we must refactor to create
-    # a Single Order with multiple items.
-
     if not payment_mode:
-        print(f"DEBUG: Payment Error - Missing payment_mode. Data: {request.data}")
-        return Response({"error": "Payment mode required"}, status=400)
-
-    items_to_process = []
-    
-    # CASE 1: Items are passed directly in the request (Frontend Redux state)
-    if request.accepted_renderer.format == 'json':
-        return Response({"error": "Payment mode required"}, status=400)
-    return redirect('checkout')
+        if request.accepted_renderer.format == 'json':
+            return Response({"error": "Payment mode required"}, status=400)
+        return redirect('checkout')
 
     order = None
 
-    # CASE 1: Items passed directly (e.g. from a separate frontend state / Buy Now)
+    # CASE 1: Items passed directly (e.g. from frontend state)
     if items_from_request:
-        summary_items = []
-        for item_data in items_from_request:
-
-            items_to_process.append({
-                "name": item_data.get('name'),
-                "quantity": item_data.get('quantity', 1),
-                "price": item_data.get('price', 0)
-            })
-    # CASE 2: Fallback to Backend Database Cart
-
-            name = item_data.get('name')
-            quantity = item_data.get('quantity', 1)
-            summary_items.append(f"{quantity} x {name}")
-            
+        summary_items = [f"{i.get('quantity', 1)} x {i.get('name')}" for i in items_from_request]
         item_names_str = ", ".join(summary_items)
         
-        # Create Single Order
         try:
             order = Order.objects.create(
                 user=request.user,
@@ -225,27 +210,19 @@ def process_payment(request):
                 transaction_id=transaction_id,
                 item_names=item_names_str
             )
+            for item_data in items_from_request:
+                OrderItem.objects.create(
+                    order=order,
+                    product_name=item_data.get('name'),
+                    quantity=item_data.get('quantity', 1),
+                    price=item_data.get('price', 0)
+                )
+            # Clear database cart as well
+            Cart.objects.filter(user=request.user).delete()
         except Exception as e:
-            # Handle potential race condition or duplicate transaction ID
              return Response({"error": f"Database Error: {str(e)}"}, status=500)
-        
-        # Create OrderItems
-        for item_data in items_from_request:
-            OrderItem.objects.create(
-                order=order,
-                product_name=item_data.get('name'),
-                quantity=item_data.get('quantity', 1),
-                price=item_data.get('price', 0)
-            )
-
-        # Optional: Clear cart if bought directly? Assuming yes for consistency
-        try:
-             Cart.objects.filter(user=request.user).delete()
-        except:
-             pass
             
     # CASE 2: Use items from the database cart
-
     else:
         try:
             cart = Cart.objects.get(user=request.user)
@@ -255,24 +232,16 @@ def process_payment(request):
                     return Response({"error": "Cart is empty"}, status=400)
                 return redirect('cart')
 
-            # Build summary string
-            summary_items = []
-            for item in cart_items:
-                 summary_items.append(f"{item.quantity} x {item.product.name}")
+            summary_items = [f"{item.quantity} x {item.product.name}" for item in cart_items]
             item_names_str = ", ".join(summary_items)
 
-            # Create Single Order
-            try:
-                order = Order.objects.create(
-                    user=request.user,
-                    payment_mode=payment_mode,
-                    transaction_id=transaction_id,
-                    item_names=item_names_str
-                )
-            except Exception as e:
-                return Response({"error": f"Database Error: {str(e)}"}, status=500)
+            order = Order.objects.create(
+                user=request.user,
+                payment_mode=payment_mode,
+                transaction_id=transaction_id,
+                item_names=item_names_str
+            )
 
-            # Create OrderItems
             for item in cart_items:
                 OrderItem.objects.create(
                     order=order,
@@ -294,11 +263,9 @@ def process_payment(request):
             "message": "Payment successful",
             "order_id": order.id
         })
-
+    
     return redirect('my_orders')
 
-
-# 🔹 MY ORDERS
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_orders(request):
@@ -310,15 +277,16 @@ def my_orders(request):
         
     return render(request, "my_orders.html", {"orders": orders})
 
-
-# 🔹 ADDRESS PAGE
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def address_page(request):
     if not request.user.is_authenticated:
-        return redirect('login')
+        return redirect('user_login')
     
     if request.method == 'POST':
-        form = AddressForm(request.data)
+        # Handles both request.data (DRF) and request.POST (Django)
+        data = request.data if hasattr(request, 'data') else request.POST
+        form = AddressForm(data)
         if form.is_valid():
             address = form.save(commit=False)
             address.user = request.user
@@ -327,47 +295,24 @@ def address_page(request):
     
     addresses = Address.objects.filter(user=request.user)
     form = AddressForm()
+    
+    if request.accepted_renderer.format == 'json':
+        return Response({"addresses": list(addresses.values())})
+        
     return render(request, "address.html", {"addresses": addresses, "form": form})
 
-
-# 🔹 DELETE ADDRESS
 @api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def delete_address(request, id):
+    if not request.user.is_authenticated:
+        return redirect('login')
     address = get_object_or_404(Address, id=id, user=request.user)
     address.delete()
     return redirect('address_page')
 
-
-# 🔹 LOGOUT
 @api_view(['POST', 'GET'])
 @permission_classes([IsAuthenticated])
 def logout_api(request):
     logout(request)
-    return redirect('login')
+    return redirect('user_login')
 
-
-# 🔹 ADDRESS MANAGEMENT
-@login_required
-def address_page(request):
-    addresses = Address.objects.filter(user=request.user)
-    if request.method == "POST":
-        form = AddressForm(request.POST)
-        if form.is_valid():
-            address = form.save(commit=False)
-            address.user = request.user
-            address.save()
-            return redirect("address_page")
-    else:
-        form = AddressForm()
-
-    return render(request, "address.html", {
-        "form": form,
-        "addresses": addresses
-    })
-
-
-@login_required
-def delete_address(request, id):
-    addr = get_object_or_404(Address, id=id, user=request.user)
-    addr.delete()
-    return redirect("address_page")
