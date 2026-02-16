@@ -250,7 +250,8 @@ def add_product_view(request):
             price=request.POST.get('price'),
             quantity=request.POST.get('quantity'),
             image=request.FILES.get('image'),
-            status='active'
+            status='active',
+           
         )
         return redirect('vendor_home')
 
