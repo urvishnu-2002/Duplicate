@@ -15,27 +15,21 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = AuthUser.objects.create_user(**validated_data)
         return user
 
+from vendor.models import Product as VendorProduct, ProductImage
 
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = ['id', 'image', 'uploaded_at']
 
-
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     class Meta:
-        model = Product
+        model = VendorProduct
         fields = [
             'id', 'name', 'description', 'category', 'price', 
             'quantity', 'images', 'status', 'is_blocked', 'created_at'
         ]
-
-
-class AddressSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Address
-        fields = '__all__'
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

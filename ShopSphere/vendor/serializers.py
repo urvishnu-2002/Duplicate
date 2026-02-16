@@ -1,305 +1,128 @@
 from rest_framework import serializers
-from django.db.models import Sum, Avg
-from .models import (
-    VendorProfile, Product, ProductImage, VendorSalesAnalytics,
-    VendorCommission, VendorPayment, VendorOrderSummary,
-    ProductVariant, InventoryAlert, ProductBundle, BundleProduct,
-    BulkProductUpload, SellerPerformanceRating, VendorWallet, VendorPayout
-)
-from user.models import Order, OrderItem
-from decimal import Decimal
+from django.contrib.auth import get_user_model
+from .models import VendorProfile, Product, ProductImage
+
+User = get_user_model()
 
 
-# ===============================================
-#          PRODUCT IMAGE SERIALIZER
-# ===============================================
-
-class ProductImageSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for User model"""
     class Meta:
-        model = ProductImage
-        fields = ['id', 'image', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
-
-
-# ===============================================
-#            PRODUCT SERIALIZER
-# ===============================================
-
-class ProductListSerializer(serializers.ModelSerializer):
-    """Product listing serializer"""
-    images = ProductImageSerializer(many=True, read_only=True)
-    vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
-    available_quantity = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Product
-        fields = [
-            'id', 'name', 'price', 'quantity', 'available_quantity',
-            'category', 'status', 'is_blocked', 'vendor_name',
-            'average_rating', 'total_reviews', 'images', 'created_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'average_rating', 'total_reviews']
-    
-    def get_available_quantity(self, obj):
-        return obj.get_available_quantity()
-
-
-class ProductDetailSerializer(serializers.ModelSerializer):
-    """Product detail serializer with full information"""
-    images = ProductImageSerializer(many=True, read_only=True)
-    vendor = serializers.SerializerMethodField()
-    available_quantity = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Product
-        fields = [
-            'id', 'vendor', 'name', 'description', 'category',
-            'price', 'quantity', 'available_quantity', 'status',
-            'is_blocked', 'blocked_reason', 'total_sold',
-            'average_rating', 'total_reviews', 'views_count',
-            'images', 'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'id', 'created_at', 'updated_at', 'average_rating',
-            'total_reviews', 'views_count', 'total_sold'
-        ]
-    
-    def get_vendor(self, obj):
-        return {
-            'id': obj.vendor.id,
-            'shop_name': obj.vendor.shop_name,
-            'average_rating': float(obj.vendor.average_rating),
-            'total_reviews': obj.vendor.total_reviews,
-        }
-    
-    def get_available_quantity(self, obj):
-        return obj.get_available_quantity()
-
-
-class ProductCreateUpdateSerializer(serializers.ModelSerializer):
-    """Product creation and update serializer"""
-    images = ProductImageSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Product
-        fields = [
-            'id', 'name', 'description', 'category', 'price',
-            'quantity', 'status', 'images'
-        ]
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
         read_only_fields = ['id']
 
 
-# ===============================================
-#        VENDOR SALES ANALYTICS SERIALIZER
-# ===============================================
-
-class VendorSalesAnalyticsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VendorSalesAnalytics
-        fields = [
-            'id', 'period_type', 'date', 'total_orders',
-            'total_items_sold', 'total_revenue', 'average_order_value',
-            'unique_customers', 'returning_customers', 'completed_orders',
-            'cancelled_orders', 'returned_orders', 'top_selling_product',
-            'category_performance'
-        ]
-        read_only_fields = [
-            'id', 'total_orders', 'total_items_sold', 'total_revenue',
-            'average_order_value', 'unique_customers', 'returning_customers',
-            'completed_orders', 'cancelled_orders', 'returned_orders',
-            'top_selling_product', 'category_performance'
-        ]
-
-
-# ===============================================
-#         VENDOR COMMISSION SERIALIZER
-# ===============================================
-
-class VendorCommissionSerializer(serializers.ModelSerializer):
-    order_id = serializers.CharField(source='order.id', read_only=True)
-    commission_percentage = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = VendorCommission
-        fields = [
-            'id', 'order_id', 'commission_rate', 'order_amount',
-            'commission_amount', 'commission_percentage', 'status',
-            'created_at', 'approved_at', 'paid_at', 'notes'
-        ]
-        read_only_fields = [
-            'id', 'created_at', 'approved_at', 'paid_at'
-        ]
-    
-    def get_commission_percentage(self, obj):
-        if obj.order_amount > 0:
-            return float((obj.commission_amount / obj.order_amount) * 100)
-        return 0
-
-
-# ===============================================
-#         VENDOR PAYMENT SERIALIZER
-# ===============================================
-
-class VendorPaymentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VendorPayment
-        fields = [
-            'id', 'payment_method', 'amount', 'from_date', 'to_date',
-            'total_commissions', 'status', 'transaction_id', 'utr_number',
-            'notes', 'failed_reason', 'created_at', 'processed_at',
-            'completed_at'
-        ]
-        read_only_fields = [
-            'id', 'created_at', 'processed_at', 'completed_at'
-        ]
-
-
-# ===============================================
-#       VENDOR ORDER SUMMARY SERIALIZER
-# ===============================================
-
-class VendorOrderSummarySerializer(serializers.ModelSerializer):
-    pending_commission_amount = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = VendorOrderSummary
-        fields = [
-            'id', 'total_orders', 'pending_orders', 'processing_orders',
-            'shipped_orders', 'delivered_orders', 'cancelled_orders',
-            'returned_orders', 'total_customers', 'repeat_customers',
-            'total_revenue', 'total_commission_paid', 'pending_commission',
-            'pending_commission_amount', 'average_rating', 'total_reviews'
-        ]
-        read_only_fields = [
-            'id', 'total_orders', 'pending_orders', 'processing_orders',
-            'shipped_orders', 'delivered_orders', 'cancelled_orders',
-            'returned_orders', 'total_customers', 'repeat_customers',
-            'total_revenue', 'total_commission_paid', 'pending_commission',
-            'average_rating', 'total_reviews'
-        ]
-    
-    def get_pending_commission_amount(self, obj):
-        return str(obj.pending_commission)
-
-
-# ===============================================
-#         VENDOR PROFILE SERIALIZER
-# ===============================================
-
-class VendorProfileListSerializer(serializers.ModelSerializer):
-    """Vendor profile listing serializer"""
-    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    
-    class Meta:
-        model = VendorProfile
-        fields = [
-            'id', 'shop_name', 'shop_description', 'user_name', 'user_email',
-            'business_type', 'approval_status', 'is_blocked', 'total_products',
-            'total_orders', 'total_revenue', 'average_rating', 'total_reviews',
-            'created_at'
-        ]
-        read_only_fields = [
-            'id', 'created_at', 'total_products', 'total_orders',
-            'total_revenue', 'average_rating', 'total_reviews'
-        ]
-
-
-class VendorProfileDetailSerializer(serializers.ModelSerializer):
-    """Detailed vendor profile serializer"""
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    user_phone = serializers.CharField(source='user.phone', read_only=True)
-    products_count = serializers.SerializerMethodField()
-    pending_commission = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = VendorProfile
-        fields = [
-            'id', 'shop_name', 'shop_description', 'address', 'business_type',
-            'user_email', 'user_phone', 'gst_number', 'pan_number', 'pan_name',
-            'approval_status', 'rejection_reason', 'is_blocked', 'blocked_reason',
-            'bank_holder_name', 'bank_account_number', 'bank_ifsc_code',
-            'shipping_fee', 'total_products', 'total_orders', 'total_revenue',
-            'average_rating', 'total_reviews', 'products_count',
-            'pending_commission', 'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'id', 'created_at', 'updated_at', 'approval_status',
-            'is_blocked', 'total_products', 'total_orders',
-            'total_revenue', 'average_rating', 'total_reviews'
-        ]
-    
-    def get_products_count(self, obj):
-        return obj.products.count()
-    
-    def get_pending_commission(self, obj):
-        return str(obj.get_pending_commission())
-
-
-class VendorProfileCreateSerializer(serializers.ModelSerializer):
-    """Vendor registration/creation serializer"""
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    """Serializer for user registration"""
     password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
     
     class Meta:
-        model = VendorProfile
-        fields = [
-            'shop_name', 'shop_description', 'address', 'business_type',
-            'gst_number', 'pan_number', 'pan_name', 'bank_holder_name',
-            'bank_account_number', 'bank_ifsc_code', 'shipping_fee',
-            'password', 'password_confirm'
-        ]
+        model = User
+        fields = ['username', 'email', 'password', 'confirm_password']
     
     def validate(self, data):
-        if data['password'] != data['password_confirm']:
+        if data['password'] != data['confirm_password']:
             raise serializers.ValidationError("Passwords do not match")
         return data
     
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        # Create user and vendor profile
-        from user.models import AuthUser
-        
-        password = validated_data.pop('password')
-        user = AuthUser.objects.create_user(
-            username=validated_data['shop_name'].lower().replace(' ', '_'),
-            role='vendor',
-            **{'first_name': validated_data['shop_name']}
-        )
-        user.set_password(password)
-        user.save()
-        
-        vendor = VendorProfile.objects.create(user=user, **validated_data)
-        return vendor
+        validated_data.pop('confirm_password')
+        user = User.objects.create_user(**validated_data)
+        return user
 
 
-# ===============================================
-#     VENDOR DASHBOARD SERIALIZER
-# ===============================================
+class LoginSerializer(serializers.Serializer):
+    """Serializer for login"""
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
 
-class VendorDashboardSerializer(serializers.Serializer):
-    """Comprehensive vendor dashboard data"""
-    profile = VendorProfileDetailSerializer(source='*', read_only=True)
-    order_summary = VendorOrderSummarySerializer(source='order_summary', read_only=True)
-    recent_orders = serializers.SerializerMethodField()
-    recent_analytics = serializers.SerializerMethodField()
-    pending_commissions = VendorCommissionSerializer(many=True, read_only=True)
+
+class VendorProfileSerializer(serializers.ModelSerializer):
+    """Serializer for VendorProfile model"""
+    user = UserSerializer(read_only=True)
+    approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
+    business_type_display = serializers.CharField(source='get_business_type_display', read_only=True)
+    id_type_display = serializers.CharField(source='get_id_type_display', read_only=True)
     
-    def get_recent_orders(self, obj):
-        from user.models import OrderItem
-        recent = OrderItem.objects.filter(vendor=obj).order_by('-order__created_at')[:10]
-        return [{
-            'id': item.order.id,
-            'product': item.product.name,
-            'quantity': item.quantity,
-            'total_price': str(item.total_price),
-            'vendor_status': item.vendor_status,
-            'created_at': item.order.created_at
-        } for item in recent]
+    id_proof_url = serializers.HyperlinkedIdentityField(view_name='serve_vendor_document', lookup_field='id', lookup_url_kwarg='profile_id')
+    # Since we have two documents, we might need more specific names or just use a method field
+    id_proof_url = serializers.SerializerMethodField()
+    pan_card_url = serializers.SerializerMethodField()
     
-    def get_recent_analytics(self, obj):
-        recent = obj.sales_analytics.filter(period_type='daily').order_by('-date')[:7]
-        return VendorSalesAnalyticsSerializer(recent, many=True).data
+    class Meta:
+        model = VendorProfile
+        fields = [
+            'id', 'user', 'shop_name', 'shop_description', 'address',
+            'business_type', 'business_type_display', 'id_type', 'id_type_display',
+            'id_number', 'id_proof_url', 'pan_card_url', 'approval_status', 'approval_status_display',
+            'rejection_reason', 'is_blocked', 'blocked_reason',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'approval_status', 'rejection_reason',
+            'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
+        ]
+
+    def get_id_proof_url(self, obj):
+        if obj.id_proof_data:
+            from django.urls import reverse
+            return reverse('serve_vendor_document', kwargs={'profile_id': obj.id, 'doc_type': 'id_proof'})
+        return None
+
+    def get_pan_card_url(self, obj):
+        if obj.pan_card_data:
+            from django.urls import reverse
+            return reverse('serve_vendor_document', kwargs={'profile_id': obj.id, 'doc_type': 'pan_card'})
+        return None
+
+
+class VendorRegistrationSerializer(serializers.Serializer):
+    """Serializer for vendor shop details submission"""
+    shop_name = serializers.CharField(max_length=100)
+    shop_description = serializers.CharField()
+    address = serializers.CharField()
+    business_type = serializers.ChoiceField(choices=['retail', 'wholesale', 'manufacturer', 'service'])
+    id_type = serializers.ChoiceField(choices=['gst', 'pan'])
+    id_number = serializers.CharField(max_length=50)
+    id_proof_file = serializers.FileField()
+    pan_card_file = serializers.FileField(required=False)
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer for ProductImage model"""
+    image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image_url', 'uploaded_at']
+
+    def get_image_url(self, obj):
+        if obj.image_data:
+            from django.urls import reverse
+            return reverse('serve_product_image', kwargs={'image_id': obj.id})
+        return None
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    """Serializer for Product model"""
+    vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'vendor', 'vendor_name', 'name', 'description', 'category', 
+            'category_display', 'price', 'quantity', 'images', 'status', 
+            'status_display', 'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'vendor', 'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
+        ]
+
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating products"""

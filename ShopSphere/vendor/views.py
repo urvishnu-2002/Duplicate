@@ -6,15 +6,58 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
+User = get_user_model()
 from django.contrib.auth.decorators import user_passes_test, login_required
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .models import VendorProfile, Product, ProductImage
+from user.models import Order, OrderItem
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
 from django.db import transaction
+from django.utils import timezone
+import json
+from decimal import Decimal
 
-User = get_user_model()
+
+# ============================================================================
+# BINARY DATA SERVING VIEWS
+# ============================================================================
+
+def serve_product_image(request, image_id):
+    """Serve product image from database"""
+    product_image = get_object_or_404(ProductImage, id=image_id)
+    if not product_image.image_data:
+        return HttpResponse(status=404)
+    
+    content_type = product_image.image_mimetype or 'image/jpeg'
+    return HttpResponse(product_image.image_data, content_type=content_type)
+
+
+def serve_vendor_document(request, profile_id, doc_type):
+    """Serve vendor documents (ID proof or PAN card) from database"""
+    vendor = get_object_or_404(VendorProfile, id=profile_id)
+    
+    if doc_type == 'id_proof':
+        data = vendor.id_proof_data
+        name = vendor.id_proof_name
+        mimetype = vendor.id_proof_mimetype
+    elif doc_type == 'pan_card':
+        data = vendor.pan_card_data
+        name = vendor.pan_card_name
+        mimetype = vendor.pan_card_mimetype
+    else:
+        return HttpResponse(status=400)
+    
+    if not data:
+        return HttpResponse(status=404)
+        
+    response = HttpResponse(data, content_type=mimetype or 'application/octet-stream')
+    if name:
+        response['Content-Disposition'] = f'inline; filename="{name}"'
+    return response
 
 
 # ============================================================================
@@ -74,6 +117,10 @@ def register_view(request):
                 if VendorProfile.objects.filter(user=user).exists():
                     return Response({'error': 'You already have a vendor profile or a pending request.'}, status=400)
                 
+                # Get files if any
+                id_proof_file = request.FILES.get('id_proof_file')
+                pan_card_file = request.FILES.get('pan_card_file')
+
                 # Create the vendor profile with all registration data
                 VendorProfile.objects.create(
                     user=user,
@@ -86,6 +133,15 @@ def register_view(request):
                     pan_name=data.get('pan_name', data.get('panName', '')),
                     id_type=data.get('id_type', data.get('idType', 'gst')),
                     id_number=data.get('id_number', data.get('idNumber', '')),
+                    
+                    id_proof_data=id_proof_file.read() if id_proof_file else None,
+                    id_proof_name=id_proof_file.name if id_proof_file else None,
+                    id_proof_mimetype=id_proof_file.content_type if id_proof_file else None,
+                    
+                    pan_card_data=pan_card_file.read() if pan_card_file else None,
+                    pan_card_name=pan_card_file.name if pan_card_file else None,
+                    pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
+                    
                     bank_holder_name=data.get('bank_holder_name', ''),
                     bank_account_number=data.get('bank_account_number', ''),
                     bank_ifsc_code=data.get('bank_ifsc_code', ''),
@@ -140,11 +196,14 @@ def verify_otp_view(request):
             user = User.objects.create_user(
                 username=reg_data['username'],
                 email=reg_data['email'],
-                password=reg_data['password'],
-                role='vendor'
+                password=reg_data['password']
+
             )
             request.session['vendor_user_id'] = user.id
             del request.session['reg_data']
+            # if request.accessed_from_mobile:
+            #     return JsonResponse({'success': True, 'message': 'OTP verified. Please complete your vendor details.'})
+
             return redirect('vendor_details')
         else:
             return render(request, 'verify_otp.html', {
@@ -164,6 +223,9 @@ def vendor_details_view(request):
     user = get_object_or_404(User, id=user_id)
 
     if request.method == "POST":
+        id_proof_file = request.FILES.get('id_proof_file')
+        pan_card_file = request.FILES.get('pan_card_file')
+
         VendorProfile.objects.create(
             user=user,
             shop_name=request.POST.get('shop_name'),
@@ -172,8 +234,16 @@ def vendor_details_view(request):
             business_type=request.POST.get('business_type'),
             id_type=request.POST.get('id_type'),
             id_number=request.POST.get('id_number'),
-            id_proof_file=request.FILES.get('id_proof_file'),
-            approval_status='pending'
+            
+            id_proof_data=id_proof_file.read() if id_proof_file else None,
+            id_proof_name=id_proof_file.name if id_proof_file else None,
+            id_proof_mimetype=id_proof_file.content_type if id_proof_file else None,
+
+            pan_card_data=pan_card_file.read() if pan_card_file else None,
+            pan_card_name=pan_card_file.name if pan_card_file else None,
+            pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
+
+            approval_status='pending'  # Status defaults to pending
         )
         if 'vendor_user_id' in request.session:
             del request.session['vendor_user_id']
@@ -246,10 +316,56 @@ def vendor_home_view(request):
 
     # If approved, show products dashboard
     products = vendor.products.all()
-    return render(request, 'vendor_dashboard.html', {
+    product_names = list(products.values_list('name', flat=True))
+
+    # Calculate sales and earnings
+    vendor_order_items = OrderItem.objects.filter(product_name__in=product_names)
+    
+    total_sales = vendor_order_items.aggregate(total=Sum('price'))['total'] or Decimal('0.00')
+    
+    # Commission (Assume 5% for now)
+    commission_rate = Decimal('0.05')
+    total_commission = total_sales * commission_rate
+    total_earnings = total_sales - total_commission
+
+    # Sales data for graph (last 7 days)
+    seven_days_ago = timezone.now() - timezone.timedelta(days=7)
+    sales_by_day = (
+        vendor_order_items.filter(order__order_date__gte=seven_days_ago)
+        .annotate(date=TruncDate('order__order_date'))
+        .values('date')
+        .annotate(daily_total=Sum('price'))
+        .order_by('date')
+    )
+
+    # Format data for Chart.js
+    labels = []
+    dataPoints = []
+    
+    # Fill in missing dates with zero
+    for i in range(7, -1, -1):
+        day = (timezone.now() - timezone.timedelta(days=i)).date()
+        labels.append(day.strftime('%b %d'))
+        
+        daily_amount = 0
+        for entry in sales_by_day:
+            if entry['date'] == day:
+                daily_amount = float(entry['daily_total'])
+                break
+        dataPoints.append(daily_amount)
+
+    context = {
         'vendor': vendor,
-        'products': products
-    })
+        'products': products,
+        'total_sales': float(total_sales),
+        'total_commission': float(total_commission),
+        'total_earnings': float(total_earnings),
+        'graph_labels': json.dumps(labels),
+        'graph_data': json.dumps(dataPoints),
+        'categories': Product.CATEGORY_CHOICES,
+    }
+
+    return render(request, 'vendor_dashboard.html', context)
 
 
 @login_required(login_url='login')
@@ -309,7 +425,7 @@ def add_product_view(request):
                 'error': 'Minimum 4 images required.'
             })
 
-        # ✅ Create Product (WITHOUT image field)
+        # ✅ Create Product
         product = Product.objects.create(
             vendor=vendor,
             name=request.POST.get('name'),
@@ -317,16 +433,16 @@ def add_product_view(request):
             category=category,
             price=request.POST.get('price'),
             quantity=request.POST.get('quantity'),
-            image=request.FILES.get('image'),
-            status='active',
-           
+            status='active'
         )
 
-        # ✅ Save Images
-        for image in images:
+        # ✅ Save Images to Database
+        for image_file in images:
             ProductImage.objects.create(
                 product=product,
-                image=image
+                image_data=image_file.read(),
+                image_name=image_file.name,
+                image_mimetype=image_file.content_type
             )
 
         return redirect('vendor_home')
@@ -382,9 +498,14 @@ def edit_product_view(request, product_id):
             # Delete old images
             product.images.all().delete()
 
-            # Save new images
-            for image in new_images:
-                ProductImage.objects.create(product=product, image=image)
+            # Save new images to database
+            for image_file in new_images:
+                ProductImage.objects.create(
+                    product=product, 
+                    image_data=image_file.read(),
+                    image_name=image_file.name,
+                    image_mimetype=image_file.content_type
+                )
 
         return redirect('vendor_home')
 
