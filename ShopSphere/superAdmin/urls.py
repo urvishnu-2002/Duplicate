@@ -1,7 +1,10 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    # API endpoints for React Admin
+    path('api/', include('superAdmin.api_urls')),
+
     # Admin Authentication
     path('login/', views.admin_login_view, name='admin_login'),
     path('logout/', views.admin_logout_view, name='admin_logout'),
