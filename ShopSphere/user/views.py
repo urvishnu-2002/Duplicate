@@ -4,13 +4,12 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
+from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
 from .forms import AddressForm
 from django.contrib.auth.decorators import login_required
-from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
-from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer
-from .forms import AddressForm
+from decimal import Decimal
+from vendor.models import Product
 
 # 🔹 REGISTER
 @api_view(['GET', 'POST'])
@@ -74,13 +73,11 @@ def login_api(request):
     return Response({"error": "Invalid credentials"}, status=401)
 
 
-from vendor.models import Product as VendorProduct
-
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
 #permission_classes([IsAuthenticated])
 def home_api(request):
-    products = VendorProduct.objects.all()
+    products = Product.objects.all()
     
     # API / JSON Response
     if 'application/json' in request.headers.get('Accept', '') or request.accepted_renderer.format == 'json':
@@ -190,30 +187,19 @@ def process_payment(request):
         print(f"DEBUG: Payment Error - Missing payment_mode. Data: {request.data}")
         return Response({"error": "Payment mode required"}, status=400)
 
-    items_to_process = []
-    
-    # CASE 1: Items are passed directly in the request (Frontend Redux state)
-    if request.accepted_renderer.format == 'json':
-        return Response({"error": "Payment mode required"}, status=400)
-    return redirect('checkout')
-
     order = None
 
     # CASE 1: Items passed directly (e.g. from a separate frontend state / Buy Now)
     if items_from_request:
         summary_items = []
+        total_amount = Decimal('0.00')
+        
         for item_data in items_from_request:
-
-            items_to_process.append({
-                "name": item_data.get('name'),
-                "quantity": item_data.get('quantity', 1),
-                "price": item_data.get('price', 0)
-            })
-    # CASE 2: Fallback to Backend Database Cart
-
             name = item_data.get('name')
-            quantity = item_data.get('quantity', 1)
+            quantity = int(item_data.get('quantity', 1))
+            price = Decimal(str(item_data.get('price', 0)))
             summary_items.append(f"{quantity} x {name}")
+            total_amount += price * quantity
             
         item_names_str = ", ".join(summary_items)
         
@@ -221,9 +207,10 @@ def process_payment(request):
         try:
             order = Order.objects.create(
                 user=request.user,
-                payment_mode=payment_mode,
+                payment_method=payment_mode,
                 transaction_id=transaction_id,
-                item_names=item_names_str
+                total_amount=total_amount,
+                subtotal=total_amount
             )
         except Exception as e:
             # Handle potential race condition or duplicate transaction ID
@@ -231,11 +218,14 @@ def process_payment(request):
         
         # Create OrderItems
         for item_data in items_from_request:
+            price = Decimal(str(item_data.get('price', 0)))
+            quantity = int(item_data.get('quantity', 1))
             OrderItem.objects.create(
                 order=order,
                 product_name=item_data.get('name'),
-                quantity=item_data.get('quantity', 1),
-                price=item_data.get('price', 0)
+                quantity=quantity,
+                product_price=price,
+                subtotal=price * quantity
             )
 
         # Optional: Clear cart if bought directly? Assuming yes for consistency
@@ -257,17 +247,22 @@ def process_payment(request):
 
             # Build summary string
             summary_items = []
+            total_amount = Decimal('0.00')
+            
             for item in cart_items:
                  summary_items.append(f"{item.quantity} x {item.product.name}")
+                 total_amount += item.get_total()
+                 
             item_names_str = ", ".join(summary_items)
 
             # Create Single Order
             try:
                 order = Order.objects.create(
                     user=request.user,
-                    payment_mode=payment_mode,
+                    payment_method=payment_mode,
                     transaction_id=transaction_id,
-                    item_names=item_names_str
+                    total_amount=total_amount,
+                    subtotal=total_amount
                 )
             except Exception as e:
                 return Response({"error": f"Database Error: {str(e)}"}, status=500)
@@ -278,7 +273,9 @@ def process_payment(request):
                     order=order,
                     product_name=item.product.name,
                     quantity=item.quantity,
-                    price=item.product.price
+                    product_price=item.product.price,
+                    subtotal=item.get_total(),
+                    product=item.product
                 )
             
             cart.items.all().delete()
@@ -344,30 +341,3 @@ def delete_address(request, id):
 def logout_api(request):
     logout(request)
     return redirect('login')
-
-
-# 🔹 ADDRESS MANAGEMENT
-@login_required
-def address_page(request):
-    addresses = Address.objects.filter(user=request.user)
-    if request.method == "POST":
-        form = AddressForm(request.POST)
-        if form.is_valid():
-            address = form.save(commit=False)
-            address.user = request.user
-            address.save()
-            return redirect("address_page")
-    else:
-        form = AddressForm()
-
-    return render(request, "address.html", {
-        "form": form,
-        "addresses": addresses
-    })
-
-
-@login_required
-def delete_address(request, id):
-    addr = get_object_or_404(Address, id=id, user=request.user)
-    addr.delete()
-    return redirect("address_page")

@@ -4,7 +4,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .forms import AgentRegistrationForm
-from .models import Agent
+from .models import DeliveryAgentProfile
 
 # ===== Dummy Agents =====
 DUMMY_AGENTS = [

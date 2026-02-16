@@ -1,292 +1,157 @@
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAdminUser
 from django.contrib.auth import get_user_model
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
+
+from user.models import Order, OrderItem
+from vendor.models import VendorProfile, Product, VendorCommission
+
 User = get_user_model()
-from django.db.models import Q
-from vendor.models import VendorProfile, Product
-from .models import VendorApprovalLog, ProductApprovalLog
-from .serializers import (
-    VendorApprovalLogSerializer, ProductApprovalLogSerializer,
-    AdminVendorDetailSerializer, AdminProductDetailSerializer,
-    AdminVendorListSerializer, AdminProductListSerializer,
-    ApproveVendorSerializer, RejectVendorSerializer,
-    BlockVendorSerializer, UnblockVendorSerializer,
-    BlockProductSerializer, UnblockProductSerializer
-)
 
-class AdminLoginRequiredMixin:
-    """Ensure user is admin"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+class AdminDashboardViewSet(viewsets.ViewSet):
+    """
+    API Endpoint for SuperAdmin Dashboard Statistics
+    """
+    permission_classes = [IsAdminUser]
 
-class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
-    """Manage vendor approval requests"""
-    queryset = VendorProfile.objects.filter(approval_status='pending')
-    serializer_class = AdminVendorDetailSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    
-    def list(self, request, *args, **kwargs):
-        queryset = VendorProfile.objects.filter(approval_status='pending')
-        
-        search = request.query_params.get('search', None)
-        if search:
-            queryset = queryset.filter(
-                Q(shop_name__icontains=search) |
-                Q(user__email__icontains=search)
-            )
-        
-        serializer = AdminVendorDetailSerializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['post'])
-    def approve(self, request, pk=None):
-        vendor = self.get_object()
-        
-        if vendor.approval_status != 'pending':
-            return Response({
-                'error': 'Only pending vendors can be approved'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        serializer = ApproveVendorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        vendor.approval_status = 'approved'
-        vendor.save()
-        
-        VendorApprovalLog.objects.create(
-            vendor=vendor,
-            admin_user=request.user,
-            action='approved',
-            reason=serializer.validated_data.get('reason', '')
-        )
-        
-        return Response({
-            'message': 'Vendor approved successfully',
-            'vendor': AdminVendorDetailSerializer(vendor).data
-        })
-    
-    @action(detail=True, methods=['post'])
-    def reject(self, request, pk=None):
-        vendor = self.get_object()
-        
-        if vendor.approval_status != 'pending':
-            return Response({
-                'error': 'Only pending vendors can be rejected'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        serializer = RejectVendorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        vendor.approval_status = 'rejected'
-        vendor.rejection_reason = serializer.validated_data['reason']
-        vendor.save()
-        
-        VendorApprovalLog.objects.create(
-            vendor=vendor,
-            admin_user=request.user,
-            action='rejected',
-            reason=serializer.validated_data['reason']
-        )
-        
-        return Response({
-            'message': 'Vendor rejected successfully',
-            'vendor': AdminVendorDetailSerializer(vendor).data
-        })
+    def list(self, request):
+        # 1. User Statistics
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        new_users_today = User.objects.filter(date_joined__date=timezone.now().date()).count()
 
-class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
-    queryset = VendorProfile.objects.exclude(approval_status='pending')
-    serializer_class = AdminVendorListSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    
-    def list(self, request, *args, **kwargs):
-        queryset = VendorProfile.objects.all()
-        
-        status_filter = request.query_params.get('status', None)
-        if status_filter:
-            queryset = queryset.filter(approval_status=status_filter)
-        
-        search = request.query_params.get('search', None)
-        if search:
-            queryset = queryset.filter(
-                Q(shop_name__icontains=search) |
-                Q(user__email__icontains=search) |
-                Q(user__username__icontains=search)
-            )
-        
-        blocked_filter = request.query_params.get('blocked', None)
-        if blocked_filter == 'true':
-            queryset = queryset.filter(is_blocked=True)
-        elif blocked_filter == 'false':
-            queryset = queryset.filter(is_blocked=False)
-        
-        serializer = AdminVendorListSerializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'])
-    def detail(self, request, pk=None):
-        vendor = self.get_object()
-        serializer = AdminVendorDetailSerializer(vendor)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['post'])
-    def block(self, request, pk=None):
-        vendor = self.get_object()
-        
-        serializer = BlockVendorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        vendor.is_blocked = True
-        vendor.blocked_reason = serializer.validated_data['reason']
-        vendor.save()
-        
-        Product.objects.filter(vendor=vendor).update(is_blocked=True)
-        
-        VendorApprovalLog.objects.create(
-            vendor=vendor,
-            admin_user=request.user,
-            action='blocked',
-            reason=serializer.validated_data['reason']
-        )
-        
-        return Response({
-            'message': 'Vendor blocked successfully',
-            'vendor': AdminVendorDetailSerializer(vendor).data
-        })
-    
-    @action(detail=True, methods=['post'])
-    def unblock(self, request, pk=None):
-        vendor = self.get_object()
-        
-        serializer = UnblockVendorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        vendor.is_blocked = False
-        vendor.blocked_reason = ''
-        vendor.save()
-        
-        VendorApprovalLog.objects.create(
-            vendor=vendor,
-            admin_user=request.user,
-            action='unblocked',
-            reason=serializer.validated_data.get('reason', '')
-        )
-        
-        return Response({
-            'message': 'Vendor unblocked successfully',
-            'vendor': AdminVendorDetailSerializer(vendor).data
-        })
-
-class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
-    queryset = Product.objects.all()
-    serializer_class = AdminProductListSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    
-    def list(self, request, *args, **kwargs):
-        queryset = Product.objects.all()
-        
-        status_filter = request.query_params.get('status', None)
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        
-        blocked_filter = request.query_params.get('blocked', None)
-        if blocked_filter == 'true':
-            queryset = queryset.filter(is_blocked=True)
-        elif blocked_filter == 'false':
-            queryset = queryset.filter(is_blocked=False)
-        
-        search = request.query_params.get('search', None)
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) |
-                Q(vendor__shop_name__icontains=search)
-            )
-        
-        vendor_id = request.query_params.get('vendor_id', None)
-        if vendor_id:
-            queryset = queryset.filter(vendor_id=vendor_id)
-        
-        serializer = AdminProductListSerializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'])
-    def detail(self, request, pk=None):
-        product = self.get_object()
-        serializer = AdminProductDetailSerializer(product)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['post'])
-    def block(self, request, pk=None):
-        product = self.get_object()
-        
-        serializer = BlockProductSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        product.is_blocked = True
-        product.blocked_reason = serializer.validated_data['reason']
-        product.save()
-        
-        ProductApprovalLog.objects.create(
-            product=product,
-            admin_user=request.user,
-            action='blocked',
-            reason=serializer.validated_data['reason']
-        )
-        
-        return Response({
-            'message': 'Product blocked successfully',
-            'product': AdminProductDetailSerializer(product).data
-        })
-    
-    @action(detail=True, methods=['post'])
-    def unblock(self, request, pk=None):
-        product = self.get_object()
-        
-        serializer = UnblockProductSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        product.is_blocked = False
-        product.blocked_reason = ''
-        product.save()
-        
-        ProductApprovalLog.objects.create(
-            product=product,
-            admin_user=request.user,
-            action='unblocked',
-            reason=serializer.validated_data.get('reason', '')
-        )
-        
-        return Response({
-            'message': 'Product unblocked successfully',
-            'product': AdminProductDetailSerializer(product).data
-        })
-
-
-class DashboardView(AdminLoginRequiredMixin, generics.GenericAPIView):
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    
-    def get(self, request):
+        # 2. Vendor Statistics
         total_vendors = VendorProfile.objects.count()
         pending_vendors = VendorProfile.objects.filter(approval_status='pending').count()
         approved_vendors = VendorProfile.objects.filter(approval_status='approved').count()
-        blocked_vendors = VendorProfile.objects.filter(is_blocked=True).count()
+
+        # 3. Order & Revenue Statistics
+        total_orders = Order.objects.count()
+        total_revenue = Order.objects.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
         
+        # 4. Product Statistics
         total_products = Product.objects.count()
-        pending_products = Product.objects.filter(status='pending').count()
-        approved_products = Product.objects.filter(status='approved').count()
-        blocked_products = Product.objects.filter(is_blocked=True).count()
+        active_products = Product.objects.filter(status='active').count()
+
+        return Response({
+            "users": {
+                "total": total_users,
+                "active": active_users,
+                "new_today": new_users_today
+            },
+            "vendors": {
+                "total": total_vendors,
+                "pending": pending_vendors,
+                "approved": approved_vendors
+            },
+            "orders": {
+                "total": total_orders,
+                "revenue": total_revenue
+            },
+            "products": {
+                "total": total_products,
+                "active": active_products
+            }
+        })
+
+class AdminUserViewSet(viewsets.ViewSet):
+    """
+    Manage Users (Block/Unblock)
+    """
+    permission_classes = [IsAdminUser]
+
+    def list(self, request):
+        users = User.objects.all().values('id', 'username', 'email', 'role', 'is_active', 'date_joined')
+        return Response(users)
+
+    @action(detail=True, methods=['post'])
+    def block(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk)
+            user.is_active = False
+            user.save()
+            return Response({'message': f'User {user.username} blocked successfully'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
+    def unblock(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk)
+            user.is_active = True
+            user.save()
+            return Response({'message': f'User {user.username} unblocked successfully'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class AdminVendorViewSet(viewsets.ViewSet):
+    """
+    Manage Vendors (Approve/Reject/Block)
+    """
+    permission_classes = [IsAdminUser]
+
+    def list(self, request):
+        status_param = request.query_params.get('status')
+        vendors = VendorProfile.objects.select_related('user').all()
+        
+        if status_param:
+            vendors = vendors.filter(approval_status=status_param)
+            
+        data = []
+        for v in vendors:
+            data.append({
+                'id': v.id,
+                'username': v.user.username,
+                'shop_name': v.shop_name,
+                'approval_status': v.approval_status,
+                'is_blocked': v.is_blocked,
+                'created_at': v.created_at
+            })
+        return Response(data)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        vendor = generics.get_object_or_404(VendorProfile, pk=pk)
+        vendor.approval_status = 'approved'
+        vendor.save()
+        return Response({'message': 'Vendor approved successfully'})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        vendor = generics.get_object_or_404(VendorProfile, pk=pk)
+        vendor.approval_status = 'rejected'
+        vendor.save()
+        return Response({'message': 'Vendor rejected'})
+
+class AdminReportViewSet(viewsets.ViewSet):
+    """
+    Admin Reports
+    """
+    permission_classes = [IsAdminUser]
+
+    @action(detail=False, methods=['get'])
+    def sales_revenue(self, request):
+        days = int(request.query_params.get('days', 30))
+        start_date = timezone.now() - timedelta(days=days)
+        
+        orders = Order.objects.filter(created_at__gte=start_date)
+        revenue = orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
         
         return Response({
-            'vendors': {
-                'total': total_vendors,
-                'pending': pending_vendors,
-                'approved': approved_vendors,
-                'blocked': blocked_vendors
-            },
-            'products': {
-                'total': total_products,
-                'pending': pending_products,
-                'approved': approved_products,
-                'blocked': blocked_products
-            }
+            'period': f'Last {days} days',
+            'total_orders': orders.count(),
+            'total_revenue': revenue
+        })
+
+    @action(detail=False, methods=['get'])
+    def commission_settings(self, request):
+        # Placeholder for commission settings logic
+        return Response({
+            'default_commission_rate': 10.0,
+            'delivery_commission_rate': 5.0
         })
