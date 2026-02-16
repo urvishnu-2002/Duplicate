@@ -8,14 +8,14 @@ urlpatterns = [
     path('logout', views.logout_api, name='logout'),
 
     # Shop / Product
-    path('', views.get_product, name='home'),
+    # path('', views.get_product, name='home'),
     path('userProducts', views.get_product, name='user_products'),
     
-    # Cart
+    # Cart 
     path('cart', views.cart_view, name='cart'),
     path('add_to_cart/<int:product_id>', views.add_to_cart, name='add_to_cart'),
     
-    # Checkout & Payment
+    
     path('checkout', views.checkout_view, name='checkout'),
     path('process_payment', views.process_payment, name='process_payment'),
 

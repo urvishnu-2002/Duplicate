@@ -274,6 +274,7 @@ def my_orders(request):
     return render(request, "my_orders.html", {"orders": orders})
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def address_page(request):
     if not request.user.is_authenticated:
         return redirect('user_login')
@@ -297,6 +298,7 @@ def address_page(request):
     return render(request, "address.html", {"addresses": addresses, "form": form})
 
 @api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
 def delete_address(request, id):
     if not request.user.is_authenticated:
         return redirect('login')

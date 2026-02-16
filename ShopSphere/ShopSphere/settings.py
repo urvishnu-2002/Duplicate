@@ -178,6 +178,7 @@ LOGOUT_REDIRECT_URL = 'login'
 
 APPEND_SLASH = False
 
+import ssl
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
