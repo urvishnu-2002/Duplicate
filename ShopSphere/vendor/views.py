@@ -6,7 +6,6 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
-User = get_user_model()
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
@@ -141,14 +140,11 @@ def verify_otp_view(request):
             user = User.objects.create_user(
                 username=reg_data['username'],
                 email=reg_data['email'],
-                password=reg_data['password']
-
+                password=reg_data['password'],
+                role='vendor'
             )
             request.session['vendor_user_id'] = user.id
             del request.session['reg_data']
-            # if request.accessed_from_mobile:
-            #     return JsonResponse({'success': True, 'message': 'OTP verified. Please complete your vendor details.'})
-
             return redirect('vendor_details')
         else:
             return render(request, 'verify_otp.html', {
@@ -177,7 +173,7 @@ def vendor_details_view(request):
             id_type=request.POST.get('id_type'),
             id_number=request.POST.get('id_number'),
             id_proof_file=request.FILES.get('id_proof_file'),
-            approval_status='pending'  # Status defaults to pending
+            approval_status='pending'
         )
         if 'vendor_user_id' in request.session:
             del request.session['vendor_user_id']
@@ -321,7 +317,13 @@ def add_product_view(request):
             category=category,
             price=request.POST.get('price'),
             quantity=request.POST.get('quantity'),
+<<<<<<< HEAD
+            image=request.FILES.get('image'),
+            status='active',
+           
+=======
             status='active'
+>>>>>>> d48bb74d11f49f1302083b5872e5cf5a4d032fc1
         )
 
         # ✅ Save Images
