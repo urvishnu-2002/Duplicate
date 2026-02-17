@@ -234,6 +234,7 @@ def vendor_details_view(request):
             business_type=request.POST.get('business_type'),
             id_type=request.POST.get('id_type'),
             id_number=request.POST.get('id_number'),
+<<<<<<< HEAD
             
             id_proof_data=id_proof_file.read() if id_proof_file else None,
             id_proof_name=id_proof_file.name if id_proof_file else None,
@@ -243,6 +244,9 @@ def vendor_details_view(request):
             pan_card_name=pan_card_file.name if pan_card_file else None,
             pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
 
+=======
+            id_proof_file=request.FILES.get('id_proof_file'),
+>>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
             approval_status='pending'  # Status defaults to pending
         )
         if 'vendor_user_id' in request.session:

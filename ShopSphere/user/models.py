@@ -167,7 +167,7 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Tracking
-    delivery_agent = models.ForeignKey('deliveryAgent.DeliveryAgentProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    delivery_agent = models.ForeignKey('deliveryAgent.Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     tracked_location = models.CharField(max_length=255, blank=True)
     
     # Timestamps
@@ -658,3 +658,16 @@ class CouponUsage(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.coupon.code}"
+    
+
+class Review(models.Model):
+    user = models.ForeignKey(AuthUser, on_delete=models.CASCADE)
+    Product = models.ForeignKey('vendor.Product', on_delete=models.CASCADE)
+    rating = models.IntegerField()
+    comment = models.TextField()
+    pictures = models.ImageField(upload_to='review_pics/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Review by {self.user.username} for {self.Product.name}"

@@ -46,6 +46,7 @@ class VendorProfileSerializer(serializers.ModelSerializer):
     business_type_display = serializers.CharField(source='get_business_type_display', read_only=True)
     id_type_display = serializers.CharField(source='get_id_type_display', read_only=True)
     
+<<<<<<< HEAD
     id_proof_url = serializers.HyperlinkedIdentityField(view_name='serve_vendor_document', lookup_field='id', lookup_url_kwarg='profile_id')
     # Since we have two documents, we might need more specific names or just use a method field
     id_proof_url = serializers.SerializerMethodField()
@@ -113,6 +114,49 @@ class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     
     class Meta:
+=======
+    class Meta:
+        model = VendorProfile
+        fields = [
+            'id', 'user', 'shop_name', 'shop_description', 'address',
+            'business_type', 'business_type_display', 'id_type', 'id_type_display',
+            'id_number', 'id_proof_file', 'approval_status', 'approval_status_display',
+            'rejection_reason', 'is_blocked', 'blocked_reason',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'approval_status', 'rejection_reason',
+            'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
+        ]
+
+
+class VendorRegistrationSerializer(serializers.Serializer):
+    """Serializer for vendor shop details submission"""
+    shop_name = serializers.CharField(max_length=100)
+    shop_description = serializers.CharField()
+    address = serializers.CharField()
+    business_type = serializers.ChoiceField(choices=['retail', 'wholesale', 'manufacturer', 'service'])
+    id_type = serializers.ChoiceField(choices=['gst', 'pan'])
+    id_number = serializers.CharField(max_length=50)
+    id_proof_file = serializers.FileField()
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer for ProductImage model"""
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'uploaded_at']
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    """Serializer for Product model"""
+    vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    
+    class Meta:
+>>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
         model = Product
         fields = [
             'id', 'vendor', 'vendor_name', 'name', 'description', 'category', 
