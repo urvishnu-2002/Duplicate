@@ -87,7 +87,18 @@ def register_view(request):
                 )
                 
                 print(f"DEBUG: Delivery profile for {user.username} created.")
-                return Response({'success': True, 'message': 'Registration submitted! Details have been sent to the Admin for approval.'}, status=201)
+                
+                # If it's an authenticated user, keep them logged in
+                # If it's a new user, log them out so they need to login to access the dashboard
+                if not request.user.is_authenticated and not is_json:
+                    # For new users, log out and redirect to login
+                    from django.contrib.auth import logout as auth_logout
+                    auth_logout(request)
+                
+                if is_json:
+                    return Response({'success': True, 'message': 'Registration submitted! Details have been sent to the Admin for approval.'}, status=201)
+                else:
+                    return redirect('delivery_login')
         except Exception as e:
             print(f"DEBUG: Error during delivery registration: {str(e)}")
             return Response({'error': str(e)}, status=500)

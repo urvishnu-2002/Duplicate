@@ -225,7 +225,7 @@
     <div class="detail-container">
         <div class="header-bar">
             <h1 id="agentName">🚚 Delivery Agent Details</h1>
-            <a href="/admin/delivery-agents/" class="back-link">← Back to List</a>
+            <a href="/superAdmin/delivery-agents/" class="back-link">← Back to List</a>
         </div>
         
         <div class="content">
@@ -320,18 +320,22 @@
         
         async function loadAgentDetails() {
             try {
-                const response = await fetch(`/api/admin/delivery-agents/${agentId}/`);
+                const response = await fetch(`/superAdmin/api/delivery-agents/${agentId}/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 const agent = await response.json();
                 
                 // Populate basic info
-                document.getElementById('agentName').textContent = `🚚 ${agent.username}`;
-                document.getElementById('agentUsername').textContent = agent.username || '-';
-                document.getElementById('agentEmail').textContent = agent.email || '-';
+                document.getElementById('agentName').textContent = `🚚 ${agent.user_username}`;
+                document.getElementById('agentUsername').textContent = agent.user_username || '-';
+                document.getElementById('agentEmail').textContent = agent.user_email || '-';
                 document.getElementById('agentMobile').textContent = agent.mobile || '-';
                 document.getElementById('agentCompany').textContent = agent.company_name || '-';
                 document.getElementById('agentVehicle').textContent = agent.vehicle_type || '-';
-                document.getElementById('agentLicense').textContent = agent.license_number || '-';
-                document.getElementById('agentCreated').textContent = new Date(agent.date_joined).toLocaleDateString() || '-';
+                document.getElementById('agentLicense').textContent = agent.driving_license_number || '-';
+                document.getElementById('agentCreated').textContent = new Date(agent.created_at).toLocaleDateString() || '-';
                 
                 // Approval Status
                 const approvalBadge = getStatusBadge(agent.approval_status_display);
@@ -409,7 +413,7 @@
                 }
             }
             
-            buttons.push(`<a href="/admin/delivery-agents/" class="btn btn-primary">Back to List</a>`);
+            buttons.push(`<a href="/superAdmin/delivery-agents/" class="btn btn-primary">Back to List</a>`);
             container.innerHTML = buttons.join('');
         }
         

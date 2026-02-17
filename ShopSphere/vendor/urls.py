@@ -2,16 +2,19 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Authentication
+    # Vendor Authentication
     path('', views.login_view, name='login'),
+    path('login/', views.login_view, name='vendor_login'),
     path('register/', views.register_view, name='register'),
     path('verify-otp/', views.verify_otp_view, name='verify_otp'),
     path('logout/', views.logout_view, name='logout'),
-    path('vendor-details/', views.vendor_details_view, name='vendor_details'),
     
-    # Vendor Dashboard and Approval Status
-    path('vendor/', views.vendor_home_view, name='vendor_home'),
+    # Vendor Profile & Status
+    path('details/', views.vendor_details_view, name='vendor_details'),
     path('approval-status/', views.approval_status_view, name='approval_status'),
+    
+    # Vendor Dashboard
+    path('dashboard/', views.vendor_home_view, name='vendor_home'),
     
     # Product Management
     path('products/add/', views.add_product_view, name='add_product'),

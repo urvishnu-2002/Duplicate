@@ -2,19 +2,19 @@
 <table border="1">
     <tr>
         <th>Vendor</th>
-        <th>Title</th>
+        <th>Shop Name</th>
         <th>Status</th>
         <th>Action</th>
     </tr>
-    {% for r in requests %}
+    {% for vendor in vendors %}
     <tr>
-        <td>{{ r.vendor.username }}</td>
-        <td>{{ r.title }}</td>
-        <td>{{ r.status }}</td>
+        <td>{{ vendor.user.username }}</td>
+        <td>{{ vendor.shop_name }}</td>
+        <td>{{ vendor.approval_status }}</td>
         <td>
-            {% if r.status == 'pending' %}
-                <a href="{% url 'update_request_status' r.id 'accepted' %}">Accept</a> |
-                <a href="{% url 'update_request_status' r.id 'rejected' %}">Reject</a>
+            {% if vendor.approval_status == 'pending' %}
+                <a href="{% url 'superAdmin:approve_vendor' vendor.id %}">Accept</a> |
+                <a href="{% url 'superAdmin:reject_vendor' vendor.id %}">Reject</a>
             {% else %}
                 Processed
             {% endif %}

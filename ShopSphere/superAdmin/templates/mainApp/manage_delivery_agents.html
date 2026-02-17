@@ -223,7 +223,7 @@
     <div class="container">
         <div class="header">
             <h1>🚚 Manage Delivery Agents</h1>
-            <a href="/admin/" class="back-btn">Back to Dashboard</a>
+            <a href="/superAdmin/" class="back-btn">Back to Dashboard</a>
         </div>
         
         <div class="stats">
@@ -290,7 +290,11 @@
         // Fetch all delivery agents from API
         async function loadAllAgents() {
             try {
-                const response = await fetch('/api/admin/delivery-agents/');
+                const response = await fetch('/superAdmin/api/delivery-agents/', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 const data = await response.json();
                 
                 allAgents = data;
@@ -341,7 +345,7 @@
                     <td><span class="status-badge ${agent.is_blocked ? 'status-blocked' : 'status-active'}">${agent.is_blocked ? 'Blocked' : 'Active'}</span></td>
                     <td>${new Date(agent.date_joined).toLocaleDateString()}</td>
                     <td>
-                        <a href="delivery-agent-detail/?id=${agent.id}" class="btn btn-view">View</a>
+                        <a href="/superAdmin/delivery-agents/${agent.id}/" class="btn btn-view">View</a>
                         ${agent.is_blocked ? 
                             `<a href="#" onclick="unblockAgent(${agent.id})" class="btn btn-unblock">Unblock</a>` :
                             `<a href="#" onclick="blockAgent(${agent.id})" class="btn btn-block">Block</a>`

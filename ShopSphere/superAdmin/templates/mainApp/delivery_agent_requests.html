@@ -202,7 +202,7 @@
     <div class="container">
         <div class="header">
             <h1>🚚 Delivery Agent Approval Requests</h1>
-            <a href="/admin/" class="back-btn">Back to Dashboard</a>
+            <a href="/superAdmin/" class="back-btn">Back to Dashboard</a>
         </div>
         
         <div class="stats">
@@ -244,7 +244,11 @@
         // Fetch pending delivery agents from API
         async function loadPendingAgents() {
             try {
-                const response = await fetch('/api/admin/delivery-agent-requests/');
+                const response = await fetch('/superAdmin/api/delivery-agent-requests/', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 const data = await response.json();
                 
                 document.getElementById('pending-count').textContent = data.length || 0;
@@ -265,15 +269,15 @@
                 
                 tableBody.innerHTML = data.map(agent => `
                     <tr>
-                        <td>${agent.company_name || 'N/A'}</td>
-                        <td>${agent.email}</td>
+                        <td>${agent.user_username || 'N/A'}</td>
+                        <td>${agent.user_email}</td>
                         <td>${agent.vehicle_type || 'N/A'}</td>
-                        <td>${agent.license_number || 'N/A'}</td>
+                        <td>${agent.driving_license_number || 'N/A'}</td>
                         <td><span class="status-pending">Pending</span></td>
                         <td>
-                            <a href="delivery-agent-detail/${agent.id}/" class="btn btn-view">View Details</a>
-                            <a href="delivery-agent-approve/${agent.id}/" class="btn btn-approve">Approve</a>
-                            <a href="delivery-agent-reject/${agent.id}/" class="btn btn-reject">Reject</a>
+                            <a href="/superAdmin/delivery-agents/${agent.id}/" class="btn btn-view">View Details</a>
+                            <a href="/superAdmin/delivery-agents/${agent.id}/approve/" class="btn btn-approve">Approve</a>
+                            <a href="/superAdmin/delivery-agents/${agent.id}/reject/" class="btn btn-reject">Reject</a>
                         </td>
                     </tr>
                 `).join('');

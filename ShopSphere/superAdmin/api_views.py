@@ -1,13 +1,13 @@
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 # User = get_user_model() - Moved inside functions to avoid AppRegistryNotReady error
 
 from django.db.models import Q
 from vendor.models import VendorProfile, Product
-from deliveryAgent.models import Agent
+from deliveryAgent.models import DeliveryProfile
 from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 from .serializers import (
     VendorApprovalLogSerializer, ProductApprovalLogSerializer,
@@ -22,15 +22,20 @@ from .serializers import (
     DeliveryAgentApprovalLogSerializer
 )
 
+class IsAdminUser(IsAuthenticated):
+    """Custom permission to check if user is an admin (is_staff)"""
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.is_staff
+
 class AdminLoginRequiredMixin:
     """Ensure user is admin"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAdminUser]
 
 class VendorRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     """Manage vendor approval requests"""
     queryset = VendorProfile.objects.filter(approval_status='pending')
     serializer_class = AdminVendorDetailSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAdminUser]
     
     def list(self, request, *args, **kwargs):
         queryset = VendorProfile.objects.filter(approval_status='pending')
@@ -121,9 +126,9 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
             )
         
         blocked_filter = request.query_params.get('blocked', None)
-        if blocked_filter == 'true':
+        if blocked_filter == 'blocked':
             queryset = queryset.filter(is_blocked=True)
-        elif blocked_filter == 'false':
+        elif blocked_filter == 'active':
             queryset = queryset.filter(is_blocked=False)
         
         serializer = AdminVendorListSerializer(queryset, many=True)
@@ -186,7 +191,7 @@ class VendorManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
 class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = AdminProductListSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAdminUser]
     
     def list(self, request, *args, **kwargs):
         queryset = Product.objects.all()
@@ -196,9 +201,9 @@ class ProductManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(status=status_filter)
         
         blocked_filter = request.query_params.get('blocked', None)
-        if blocked_filter == 'true':
+        if blocked_filter == 'blocked':
             queryset = queryset.filter(is_blocked=True)
-        elif blocked_filter == 'false':
+        elif blocked_filter == 'active':
             queryset = queryset.filter(is_blocked=False)
         
         search = request.query_params.get('search', None)
@@ -282,6 +287,11 @@ class DashboardView(AdminLoginRequiredMixin, generics.GenericAPIView):
         approved_products = Product.objects.filter(status='approved').count()
         blocked_products = Product.objects.filter(is_blocked=True).count()
         
+        total_agents = DeliveryProfile.objects.count()
+        pending_agents = DeliveryProfile.objects.filter(approval_status='pending').count()
+        active_agents = DeliveryProfile.objects.filter(approval_status='approved', is_blocked=False).count()
+        blocked_agents = DeliveryProfile.objects.filter(is_blocked=True).count()
+        
         return Response({
             'vendors': {
                 'total': total_vendors,
@@ -294,24 +304,30 @@ class DashboardView(AdminLoginRequiredMixin, generics.GenericAPIView):
                 'pending': pending_products,
                 'approved': approved_products,
                 'blocked': blocked_products
+            },
+            'delivery_agents': {
+                'total': total_agents,
+                'pending': pending_agents,
+                'active': active_agents,
+                'blocked': blocked_agents
             }
         })
 
 
 class DeliveryAgentRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     """Manage delivery agent approval requests"""
-    queryset = Agent.objects.filter(approval_status='pending')
+    queryset = DeliveryProfile.objects.filter(approval_status='pending')
     serializer_class = AdminDeliveryAgentDetailSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAdminUser]
     
     def list(self, request, *args, **kwargs):
-        queryset = Agent.objects.filter(approval_status='pending')
+        queryset = DeliveryProfile.objects.filter(approval_status='pending')
         
         search = request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
-                Q(company_name__icontains=search) |
-                Q(email__icontains=search)
+                Q(user__email__icontains=search) |
+                Q(vehicle_number__icontains=search)
             )
         
         serializer = AdminDeliveryAgentDetailSerializer(queryset, many=True)
@@ -375,12 +391,12 @@ class DeliveryAgentRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet
 
 class DeliveryAgentManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     """Manage approved delivery agents"""
-    queryset = Agent.objects.exclude(approval_status='pending')
+    queryset = DeliveryProfile.objects.all()
     serializer_class = AdminDeliveryAgentListSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAdminUser]
     
     def list(self, request, *args, **kwargs):
-        queryset = Agent.objects.all()
+        queryset = DeliveryProfile.objects.all()
         
         status_filter = request.query_params.get('status', None)
         if status_filter:
@@ -389,18 +405,23 @@ class DeliveryAgentManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelView
         search = request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
-                Q(company_name__icontains=search) |
-                Q(email__icontains=search) |
-                Q(username__icontains=search)
+                Q(user__email__icontains=search) |
+                Q(vehicle_number__icontains=search) |
+                Q(user__username__icontains=search)
             )
         
         blocked_filter = request.query_params.get('blocked', None)
-        if blocked_filter == 'true':
+        if blocked_filter == 'blocked':
             queryset = queryset.filter(is_blocked=True)
-        elif blocked_filter == 'false':
+        elif blocked_filter == 'active':
             queryset = queryset.filter(is_blocked=False)
         
         serializer = AdminDeliveryAgentListSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        agent = self.get_object()
+        serializer = AdminDeliveryAgentDetailSerializer(agent)
         return Response(serializer.data)
     
     @action(detail=True, methods=['get'])

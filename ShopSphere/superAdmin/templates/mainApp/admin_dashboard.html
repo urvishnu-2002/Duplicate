@@ -359,7 +359,7 @@
                 <div class="stat-number" id="blocked_vendors">0</div>
                 <div class="stat-label">Blocked Vendors</div>
             </div>
-            
+            <br>
             <!-- Product Stats -->
             <div class="stat-card products">
                 <div class="stat-number" id="total_products">0</div>
@@ -377,7 +377,7 @@
                 <div class="stat-number" id="blocked_products">0</div>
                 <div class="stat-label">Blocked Products</div>
             </div>
-            
+            <br>
             <!-- Delivery Agent Stats -->
             <div class="stat-card agents">
                 <div class="stat-number" id="total_agents">0</div>
@@ -401,19 +401,19 @@
         <div class="menu-section">
             <h2><span class="section-icon">👥</span> Vendor Management</h2>
             <div class="menu-links">
-                <a href="/admin/vendor-requests/" class="menu-link">
+                <a href="/superAdmin/vendor-requests/" class="menu-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">📋</div>
                         <div class="menu-link-text">Vendor Requests</div>
                     </div>
                 </a>
-                <a href="/admin/vendors/" class="menu-link">
+                <a href="/superAdmin/vendors/" class="menu-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">👨‍💼</div>
                         <div class="menu-link-text">All Vendors</div>
                     </div>
                 </a>
-                <a href="/admin/blocked-vendors/" class="menu-link">
+                <a href="/superAdmin/vendors/?blocked=blocked" class="menu-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">🚫</div>
                         <div class="menu-link-text">Blocked Vendors</div>
@@ -426,22 +426,22 @@
         <div class="menu-section">
             <h2><span class="section-icon">📦</span> Product Management</h2>
             <div class="menu-links">
-                <a href="/admin/products/" class="menu-link">
+                <a href="/superAdmin/products/" class="menu-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">📦</div>
                         <div class="menu-link-text">All Products</div>
                     </div>
                 </a>
-                <a href="/admin/blocked-products/" class="menu-link">
+                <a href="/superAdmin/products/?blocked=blocked" class="menu-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">⚠️</div>
                         <div class="menu-link-text">Blocked Products</div>
                     </div>
                 </a>
-                <a href="/admin/pending-products/" class="menu-link">
+                <a href="/superAdmin/products/?status=inactive" class="menu-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">⏳</div>
-                        <div class="menu-link-text">Pending Review</div>
+                        <div class="menu-link-text">Inactive Products</div>
                     </div>
                 </a>
             </div>
@@ -451,19 +451,19 @@
         <div class="menu-section agents">
             <h2><span class="section-icon">🚚</span> Delivery Agent Management</h2>
             <div class="menu-links">
-                <a href="/admin/delivery-agent-requests/" class="menu-link agents-link">
+                <a href="/superAdmin/delivery-agent-requests/" class="menu-link agents-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">📋</div>
                         <div class="menu-link-text">Agent Requests</div>
                     </div>
                 </a>
-                <a href="/admin/delivery-agents/" class="menu-link agents-link">
+                <a href="/superAdmin/delivery-agents/" class="menu-link agents-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">🚗</div>
                         <div class="menu-link-text">All Agents</div>
                     </div>
                 </a>
-                <a href="/admin/delivery-agents/?blocked=true" class="menu-link agents-link">
+                <a href="/superAdmin/delivery-agents/?blocked=blocked" class="menu-link agents-link">
                     <div class="menu-link-content">
                         <div class="menu-link-icon">🔒</div>
                         <div class="menu-link-text">Blocked Agents</div>
@@ -476,9 +476,9 @@
         <div class="quick-actions">
             <h2><span class="section-icon">⚡</span> Quick Actions</h2>
             <div class="action-items">
-                <a href="/admin/vendor-requests/" class="action-item">View Vendor Requests</a>
-                <a href="/admin/delivery-agent-requests/" class="action-item">View Agent Requests</a>
-                <a href="/admin/products/" class="action-item">Browse Products</a>
+                <a href="/superAdmin/vendor-requests/" class="action-item">View Vendor Requests</a>
+                <a href="/superAdmin/delivery-agent-requests/" class="action-item">View Agent Requests</a>
+                <a href="/superAdmin/products/" class="action-item">Browse Products</a>
                 <a href="/" class="action-item">Exit Admin Panel</a>
             </div>
         </div>
@@ -492,7 +492,11 @@
         // Fetch and update dashboard statistics
         async function loadDashboardStats() {
             try {
-                const response = await fetch('/api/admin/dashboard/');
+                const response = await fetch('/superAdmin/api/dashboard/', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 const data = await response.json();
                 
                 // Update vendor stats

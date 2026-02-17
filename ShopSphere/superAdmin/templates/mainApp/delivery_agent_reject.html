@@ -173,23 +173,24 @@
             <div class="agent-info" id="agentInfo">
                 <div class="agent-info-row">
                     <span class="agent-info-label">Company Name:</span>
-                    <span class="agent-info-value" id="agentCompany">Loading...</span>
+                    <span class="agent-info-value">{{ agent.user.username }}</span>
                 </div>
                 <div class="agent-info-row">
                     <span class="agent-info-label">Email:</span>
-                    <span class="agent-info-value" id="agentEmail">Loading...</span>
+                    <span class="agent-info-value">{{ agent.user.email }}</span>
                 </div>
                 <div class="agent-info-row">
                     <span class="agent-info-label">Vehicle Type:</span>
-                    <span class="agent-info-value" id="agentVehicle">N/A</span>
+                    <span class="agent-info-value">{{ agent.vehicle_type }}</span>
                 </div>
                 <div class="agent-info-row">
                     <span class="agent-info-label">License Number:</span>
-                    <span class="agent-info-value" id="agentLicense">N/A</span>
+                    <span class="agent-info-value">{{ agent.driving_license_number }}</span>
                 </div>
             </div>
             
             <form id="rejectForm" method="POST">
+                {% csrf_token %}
                 <div class="form-group">
                     <label for="rejectionReason">Reason for Rejection *</label>
                     <textarea id="rejectionReason" name="reason" required placeholder="Explain why this agent application is being rejected. Be specific about the issues found..."></textarea>
@@ -197,78 +198,22 @@
                 
                 <div class="button-group">
                     <button type="submit" class="btn btn-danger">✗ Reject Agent</button>
-                    <a href="/admin/delivery-agents/" class="btn btn-cancel" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
+                    <a href="/superAdmin/delivery-agents/" class="btn btn-cancel" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
     
     <script>
-        const agentId = new URLSearchParams(window.location.search).get('id') || 
-                       window.location.pathname.split('/').filter(Boolean).find((_, i, arr) => arr[i-1] === 'delivery-agent-reject');
-        
-        async function loadAgentInfo() {
-            try {
-                const response = await fetch(`/api/admin/delivery-agents/${agentId}/`);
-                const agent = await response.json();
-                
-                document.getElementById('agentCompany').textContent = agent.company_name || '-';
-                document.getElementById('agentEmail').textContent = agent.email || '-';
-                document.getElementById('agentVehicle').textContent = agent.vehicle_type || 'N/A';
-                document.getElementById('agentLicense').textContent = agent.license_number || 'N/A';
-            } catch (error) {
-                console.error('Error loading agent:', error);
-            }
-        }
-        
-        document.getElementById('rejectForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
+        document.getElementById('rejectForm').addEventListener('submit', function(e) {
             const reason = document.getElementById('rejectionReason').value;
-            
             if (!reason.trim()) {
                 alert('Please provide a reason for rejection');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/admin/delivery-agent-requests/${agentId}/reject/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({ reason })
-                });
-                
-                if (response.ok) {
-                    alert('Agent rejected successfully!');
-                    window.location.href = '/admin/delivery-agents/';
-                } else {
-                    alert('Error rejecting agent. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error rejecting agent.');
+                e.preventDefault();
+            } else if (!confirm('Are you sure you want to reject this delivery agent?')) {
+                e.preventDefault();
             }
         });
-        
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        
-        document.addEventListener('DOMContentLoaded', loadAgentInfo);
     </script>
 </body>
 </html>

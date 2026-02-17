@@ -17,7 +17,7 @@ class ProductApprovalLogAdmin(admin.ModelAdmin):
 
 @admin.register(DeliveryAgentApprovalLog)
 class DeliveryAgentApprovalLogAdmin(admin.ModelAdmin):
-    list_display = ('agent', 'action', 'admin_user', 'timestamp')
+    list_display = ('delivery_agent', 'action', 'admin_user', 'timestamp')
     list_filter = ('action', 'timestamp')
-    search_fields = ('agent__name', 'reason')
+    search_fields = ('delivery_agent__user__username', 'reason')
     readonly_fields = ('timestamp',)

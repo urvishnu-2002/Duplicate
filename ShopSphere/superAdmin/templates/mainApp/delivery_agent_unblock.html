@@ -180,19 +180,19 @@
             <div class="agent-info" id="agentInfo">
                 <div class="agent-info-row">
                     <span class="agent-info-label">Company Name:</span>
-                    <span class="agent-info-value" id="agentCompany">Loading...</span>
+                    <span class="agent-info-value">{{ agent.user.username }}</span>
                 </div>
                 <div class="agent-info-row">
                     <span class="agent-info-label">Email:</span>
-                    <span class="agent-info-value" id="agentEmail">Loading...</span>
+                    <span class="agent-info-value">{{ agent.user.email }}</span>
                 </div>
                 <div class="agent-info-row">
                     <span class="agent-info-label">Vehicle Type:</span>
-                    <span class="agent-info-value" id="agentVehicle">N/A</span>
+                    <span class="agent-info-value">{{ agent.vehicle_type }}</span>
                 </div>
                 <div class="agent-info-row">
-                    <span class="agent-info-label">License Number:</span>
-                    <span class="agent-info-value" id="agentLicense">N/A</span>
+                    <span class="agent-info-label">Blocked Reason:</span>
+                    <span class="agent-info-value">{{ agent.blocked_reason|default:"No reason provided" }}</span>
                 </div>
             </div>
             
@@ -202,6 +202,7 @@
             </div>
             
             <form id="unblockForm" method="POST">
+                {% csrf_token %}
                 <div class="form-group">
                     <label for="unblockReason">Reason for Unblocking (Optional)</label>
                     <textarea id="unblockReason" name="reason" placeholder="Add notes about why this agent is being unblocked..."></textarea>
@@ -209,78 +210,18 @@
                 
                 <div class="button-group">
                     <button type="submit" class="btn btn-success">🔓 Unblock Agent</button>
-                    <a href="/admin/delivery-agents/" class="btn btn-cancel" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
+                    <a href="/superAdmin/delivery-agents/" class="btn btn-cancel" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
     
     <script>
-        const agentId = new URLSearchParams(window.location.search).get('id') || 
-                       window.location.pathname.split('/').filter(Boolean).find((_, i, arr) => arr[i-1] === 'delivery-agent-unblock');
-        
-        async function loadAgentInfo() {
-            try {
-                const response = await fetch(`/api/admin/delivery-agents/${agentId}/`);
-                const agent = await response.json();
-                
-                document.getElementById('agentCompany').textContent = agent.company_name || '-';
-                document.getElementById('agentEmail').textContent = agent.email || '-';
-                document.getElementById('agentVehicle').textContent = agent.vehicle_type || 'N/A';
-                document.getElementById('agentLicense').textContent = agent.license_number || 'N/A';
-                
-                if (agent.blocked_reason) {
-                    document.getElementById('blockedReasonSection').style.display = 'block';
-                    document.getElementById('blockedReasonText').textContent = agent.blocked_reason;
-                }
-            } catch (error) {
-                console.error('Error loading agent:', error);
-            }
-        }
-        
-        document.getElementById('unblockForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const reason = document.getElementById('unblockReason').value;
-            
-            try {
-                const response = await fetch(`/api/admin/delivery-agents/${agentId}/unblock/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({ reason })
-                });
-                
-                if (response.ok) {
-                    alert('Agent unblocked successfully!');
-                    window.location.href = '/admin/delivery-agents/';
-                } else {
-                    alert('Error unblocking agent. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error unblocking agent.');
+        document.getElementById('unblockForm').addEventListener('submit', function(e) {
+            if (!confirm('Are you sure you want to unblock this delivery agent?')) {
+                e.preventDefault();
             }
         });
-        
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        
-        document.addEventListener('DOMContentLoaded', loadAgentInfo);
     </script>
 </body>
 </html>

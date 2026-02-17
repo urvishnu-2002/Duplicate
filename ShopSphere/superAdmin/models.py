@@ -54,7 +54,7 @@ class DeliveryAgentApprovalLog(models.Model):
         ('reviewed', 'Reviewed'),
     ]
 
-    delivery_agent = models.ForeignKey('deliveryAgent.Agent', on_delete=models.CASCADE, related_name='approval_logs')
+    delivery_agent = models.ForeignKey('deliveryAgent.DeliveryProfile', on_delete=models.CASCADE, related_name='approval_logs')
     admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='delivery_agent_approvals')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     reason = models.TextField(blank=True, null=True)
