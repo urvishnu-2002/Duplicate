@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout, get_user_model
-User = get_user_model()
+# User = get_user_model() - Moved inside functions to avoid AppRegistryNotReady error
+
 from django.db.models import Q
 from django.urls import reverse
 from vendor.models import VendorProfile, Product
 from .models import VendorApprovalLog, ProductApprovalLog
-
+from rest_framework.permissions import AllowAny,IsAuthenticated
 def is_mainapp_admin(user):
     return True
 
@@ -19,6 +20,12 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
+
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
 def admin_login_view(request):
     if request.user.is_authenticated and is_mainapp_admin(request.user):
         return redirect('admin_dashboard')
@@ -31,6 +38,8 @@ def admin_login_view(request):
 
         if not user:
             try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
                 matching_users = User.objects.filter(username=identifier)
                 for potential_user in matching_users:
                     user = authenticate(request, username=potential_user.email, password=password)

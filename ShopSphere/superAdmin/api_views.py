@@ -3,7 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.contrib.auth import get_user_model
-User = get_user_model()
+# User = get_user_model() - Moved inside functions to avoid AppRegistryNotReady error
+
 from django.db.models import Q
 from vendor.models import VendorProfile, Product
 from .models import VendorApprovalLog, ProductApprovalLog

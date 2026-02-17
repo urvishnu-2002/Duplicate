@@ -58,15 +58,23 @@ def login_api(request):
         # Use session login for HTML form submissions
         login(request, user)
         
+        # Determine role for frontend
+        role = user.role.upper()
+        if user.is_superuser:
+            role = 'SUPER_ADMIN'
+        elif user.is_staff:
+            role = 'ADMIN'
+            
         # For API/JSON clients, also return JWT tokens
         refresh = RefreshToken.for_user(user)
+        refresh['role'] = role  # Add role to JWT payload
         
         if request.accepted_renderer.format == 'json':
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "username": user.username,
-                "role": user.role
+                "role": role
             })
         else:
             return redirect('home')

@@ -11,6 +11,8 @@ class AuthUser(AbstractUser):
     ROLE_CHOICES = [
         ('customer', 'Customer'),
         ('vendor', 'Vendor'),
+        ('admin', 'Admin'),
+        ('super_admin', 'Super Admin'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
 
