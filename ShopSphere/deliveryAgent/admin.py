@@ -1,16 +1,10 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from .models import Agent
+from .models import DeliveryProfile, Order
 
-class AgentAdmin(UserAdmin):
-    model = Agent
-    
-    fieldsets = UserAdmin.fieldsets + (
-        (None, {'fields': ('mobile', 'license_number', 'company_name', 'vehicle_type')}),
-    )
-    
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        (None, {'fields': ('mobile', 'license_number', 'company_name', 'vehicle_type')}),
-    )
+class DeliveryProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'vehicle_type', 'approval_status')
+    list_filter = ('vehicle_type', 'approval_status')
+    search_fields = ('user__username', 'vehicle_number')
 
-admin.site.register(Agent, AgentAdmin)
+admin.site.register(DeliveryProfile, DeliveryProfileAdmin)
+admin.site.register(Order)

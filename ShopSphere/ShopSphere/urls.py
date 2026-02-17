@@ -11,7 +11,7 @@ urlpatterns = [
     # API endpoints for each app
     path('vendor/', include('vendor.urls')),
     path('superAdmin/', include('superAdmin.urls')),
-    path('deliveryAgent/', include('deliveryAgent.urls')),
+    path('delivery/', include('deliveryAgent.urls')),
 ]
 
 # Serve media files
