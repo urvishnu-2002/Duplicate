@@ -45,7 +45,7 @@ class DeliveryAssignmentDetailSerializer(serializers.ModelSerializer):
     """Detailed delivery assignment serializer"""
     agent = serializers.SerializerMethodField()
     order_details = serializers.SerializerMethodField()
-    tracking_history = DeliveryTrackingSerializer(source='tracking_history', many=True, read_only=True)
+    tracking_history = DeliveryTrackingSerializer(many=True, read_only=True)
     
     class Meta:
         model = DeliveryAssignment
@@ -273,7 +273,7 @@ class DeliveryAgentProfileCreateSerializer(serializers.ModelSerializer):
 
 class DeliveryAgentDashboardSerializer(serializers.Serializer):
     """Comprehensive delivery agent dashboard data"""
-    profile = DeliveryAgentProfileDetailSerializer(source='*', read_only=True)
+    profile = DeliveryAgentProfileDetailSerializer(read_only=True)
     active_assignments = serializers.SerializerMethodField()
     today_stats = serializers.SerializerMethodField()
     recent_feedback = serializers.SerializerMethodField()

@@ -1,0 +1,1804 @@
+openapi: 3.0.3
+info:
+  title: ShopSphere API
+  version: 1.0.0
+  description: API documentation for ShopSphere E-commerce Backend
+paths:
+  /add_to_cart/{product_id}:
+    get:
+      operationId: add_to_cart_retrieve
+      parameters:
+      - in: path
+        name: product_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - add_to_cart
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: add_to_cart_create
+      parameters:
+      - in: path
+        name: product_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - add_to_cart
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /address:
+    get:
+      operationId: address_retrieve
+      tags:
+      - address
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: address_create
+      tags:
+      - address
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /cart:
+    get:
+      operationId: cart_retrieve
+      tags:
+      - cart
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /checkout:
+    get:
+      operationId: checkout_retrieve
+      tags:
+      - checkout
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /delete-address/{id}:
+    get:
+      operationId: delete_address_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - delete-address
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: delete_address_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - delete-address
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: delete_address_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - delete-address
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /deliveryAgent/api/assignments/:
+    get:
+      operationId: deliveryAgent_api_assignments_retrieve
+      description: Get all assigned deliveries for agent
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/{id}/:
+    get:
+      operationId: deliveryAgent_api_assignments_retrieve_2
+      description: Get detailed delivery assignment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/{id}/accept/:
+    post:
+      operationId: deliveryAgent_api_assignments_accept_create
+      description: Accept a delivery assignment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/{id}/complete/:
+    post:
+      operationId: deliveryAgent_api_assignments_complete_create
+      description: Mark delivery as completed
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/{id}/failed/:
+    post:
+      operationId: deliveryAgent_api_assignments_failed_create
+      description: Mark delivery as failed
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/{id}/in_transit/:
+    post:
+      operationId: deliveryAgent_api_assignments_in_transit_create
+      description: Mark delivery as in transit
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/{id}/start/:
+    post:
+      operationId: deliveryAgent_api_assignments_start_create
+      description: Start delivery (picked up from vendor)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/assignments/active/:
+    get:
+      operationId: deliveryAgent_api_assignments_active_retrieve
+      description: Get currently active deliveries
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/daily-stats/:
+    get:
+      operationId: deliveryAgent_api_daily_stats_retrieve
+      description: Get daily stats for last 30 days
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/daily-stats/today/:
+    get:
+      operationId: deliveryAgent_api_daily_stats_today_retrieve
+      description: Get today's statistics
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/dashboard/:
+    get:
+      operationId: deliveryAgent_api_dashboard_retrieve
+      description: Comprehensive delivery agent dashboard
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryAgentDashboard'
+          description: ''
+  /deliveryAgent/api/earnings/:
+    get:
+      operationId: deliveryAgent_api_earnings_retrieve
+      description: Get all commissions/earnings
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/earnings/summary/:
+    get:
+      operationId: deliveryAgent_api_earnings_summary_retrieve
+      description: Get earnings summary
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/feedback/:
+    get:
+      operationId: deliveryAgent_api_feedback_retrieve
+      description: Get all feedback for agent
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/feedback/rating_summary/:
+    get:
+      operationId: deliveryAgent_api_feedback_rating_summary_retrieve
+      description: Get rating summary
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/payments/:
+    get:
+      operationId: deliveryAgent_api_payments_retrieve
+      description: Get all payment records
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/payments/pending/:
+    get:
+      operationId: deliveryAgent_api_payments_pending_retrieve
+      description: Get pending payout amount
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/tracking/{id}/get_tracking_history/:
+    get:
+      operationId: deliveryAgent_api_tracking_get_tracking_history_retrieve
+      description: Get tracking history for a delivery
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /deliveryAgent/api/tracking/{id}/update_location/:
+    post:
+      operationId: deliveryAgent_api_tracking_update_location_create
+      description: Update current delivery location (real-time tracking)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - deliveryAgent
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /logout:
+    get:
+      operationId: logout_retrieve
+      tags:
+      - logout
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: logout_create
+      tags:
+      - logout
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /my_orders:
+    get:
+      operationId: my_orders_retrieve
+      tags:
+      - my_orders
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /process_payment:
+    post:
+      operationId: process_payment_create
+      tags:
+      - process_payment
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /register:
+    get:
+      operationId: register_retrieve
+      tags:
+      - register
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: register_create
+      tags:
+      - register
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /user_login:
+    get:
+      operationId: user_login_retrieve
+      tags:
+      - user_login
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_login_create
+      tags:
+      - user_login
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/commissions/:
+    get:
+      operationId: vendor_api_commissions_retrieve
+      description: Get all commissions for vendor
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/commissions/summary/:
+    get:
+      operationId: vendor_api_commissions_summary_retrieve
+      description: Get commission summary
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/dashboard/:
+    get:
+      operationId: vendor_api_dashboard_retrieve
+      description: Get comprehensive vendor dashboard with stats and recent data
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorDashboard'
+          description: ''
+  /vendor/api/order-summary/{id}/:
+    get:
+      operationId: vendor_api_order_summary_retrieve
+      description: Get order summary for vendor
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/orders/:
+    get:
+      operationId: vendor_api_orders_retrieve
+      description: Get all orders for vendor's products
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/orders/{id}/update_status/:
+    post:
+      operationId: vendor_api_orders_update_status_create
+      description: Update order item status
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/payments/:
+    get:
+      operationId: vendor_api_payments_retrieve
+      description: Get all payment records for vendor
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/payments/pending/:
+    get:
+      operationId: vendor_api_payments_pending_retrieve
+      description: Get pending payments
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/products/:
+    get:
+      operationId: vendor_api_products_list
+      description: Complete CRUD operations for vendor products
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductListList'
+          description: ''
+    post:
+      operationId: vendor_api_products_create
+      description: Create new product
+      tags:
+      - vendor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductCreateUpdate'
+        required: true
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCreateUpdate'
+          description: ''
+  /vendor/api/products/{id}/:
+    get:
+      operationId: vendor_api_products_retrieve
+      description: Complete CRUD operations for vendor products
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+          description: ''
+    put:
+      operationId: vendor_api_products_update
+      description: Update product
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductCreateUpdate'
+        required: true
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCreateUpdate'
+          description: ''
+    patch:
+      operationId: vendor_api_products_partial_update
+      description: Complete CRUD operations for vendor products
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductCreateUpdate'
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCreateUpdate'
+          description: ''
+    delete:
+      operationId: vendor_api_products_destroy
+      description: Delete product
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /vendor/api/products/active/:
+    get:
+      operationId: vendor_api_products_active_retrieve
+      description: Get active products
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+          description: ''
+  /vendor/api/products/search/:
+    get:
+      operationId: vendor_api_products_search_retrieve
+      description: Search products by name or category
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+          description: ''
+  /vendor/api/sales-analytics/:
+    get:
+      operationId: vendor_api_sales_analytics_retrieve
+      description: Get sales analytics for vendor
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/api/sales-analytics/summary/:
+    get:
+      operationId: vendor_api_sales_analytics_summary_retrieve
+      description: Get sales summary for last 30 days
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/products/add/:
+    get:
+      operationId: vendor_products_add_retrieve
+      description: Add new product with minimum 4 images
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: vendor_products_add_create
+      description: Add new product with minimum 4 images
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /vendor/register/:
+    get:
+      operationId: vendor_register_retrieve
+      description: Vendor registration - handles both traditional form and JSON API
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: vendor_register_create
+      description: Vendor registration - handles both traditional form and JSON API
+      tags:
+      - vendor
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    ApprovalStatusEnum:
+      enum:
+      - pending
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `approved` - Approved
+        * `rejected` - Rejected
+    AvailabilityStatusEnum:
+      enum:
+      - available
+      - on_delivery
+      - on_break
+      - offline
+      type: string
+      description: |-
+        * `available` - Available
+        * `on_delivery` - On Delivery
+        * `on_break` - On Break
+        * `offline` - Offline
+    BusinessTypeEnum:
+      enum:
+      - retail
+      - wholesale
+      - manufacturer
+      - service
+      type: string
+      description: |-
+        * `retail` - Retail
+        * `wholesale` - Wholesale
+        * `manufacturer` - Manufacturer
+        * `service` - Service
+    CategoryEnum:
+      enum:
+      - electronics
+      - fashion
+      - home_kitchen
+      - beauty_personal_care
+      - sports_fitness
+      - toys_games
+      - automotive
+      - grocery
+      - books
+      - services
+      - other
+      type: string
+      description: |-
+        * `electronics` - Electronics
+        * `fashion` - Fashion
+        * `home_kitchen` - Home & Kitchen
+        * `beauty_personal_care` - Beauty & Personal Care
+        * `sports_fitness` - Sports & Fitness
+        * `toys_games` - Toys & Games
+        * `automotive` - Automotive
+        * `grocery` - Grocery
+        * `books` - Books
+        * `services` - Services
+        * `other` - Other
+    DeliveryAgentDashboard:
+      type: object
+      description: Comprehensive delivery agent dashboard data
+      properties:
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/DeliveryAgentProfileDetail'
+          readOnly: true
+        active_assignments:
+          type: string
+          readOnly: true
+        today_stats:
+          type: string
+          readOnly: true
+        recent_feedback:
+          type: string
+          readOnly: true
+        pending_commissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryCommission'
+          readOnly: true
+      required:
+      - active_assignments
+      - pending_commissions
+      - profile
+      - recent_feedback
+      - today_stats
+    DeliveryAgentProfileDetail:
+      type: object
+      description: Detailed delivery agent profile serializer
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user_name:
+          type: string
+          readOnly: true
+        user_email:
+          type: string
+          readOnly: true
+        phone_number:
+          type: string
+          maxLength: 15
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        address:
+          type: string
+        city:
+          type: string
+          maxLength: 50
+        state:
+          type: string
+          maxLength: 50
+        postal_code:
+          type: string
+          maxLength: 10
+        vehicle_type:
+          $ref: '#/components/schemas/VehicleTypeEnum'
+        vehicle_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        license_number:
+          type: string
+          maxLength: 50
+        license_expires:
+          type: string
+          format: date
+        id_type:
+          $ref: '#/components/schemas/IdTypeEnum'
+        id_number:
+          type: string
+          maxLength: 50
+        bank_holder_name:
+          type: string
+          maxLength: 100
+        bank_account_number:
+          type: string
+          maxLength: 20
+        bank_ifsc_code:
+          type: string
+          maxLength: 11
+        bank_name:
+          type: string
+          maxLength: 100
+        approval_status:
+          $ref: '#/components/schemas/ApprovalStatusEnum'
+        rejection_reason:
+          type: string
+          nullable: true
+        availability_status:
+          $ref: '#/components/schemas/AvailabilityStatusEnum'
+        is_active:
+          type: boolean
+        is_blocked:
+          type: boolean
+        blocked_reason:
+          type: string
+          nullable: true
+        service_cities:
+          description: List of cities where agent provides service
+        preferred_delivery_radius:
+          type: integer
+          maximum: 50
+          minimum: 1
+          description: Preferred delivery radius in kilometers
+        working_hours_start:
+          type: string
+          format: time
+          nullable: true
+        working_hours_end:
+          type: string
+          format: time
+          nullable: true
+        total_deliveries:
+          type: integer
+          readOnly: true
+        completed_deliveries:
+          type: integer
+          readOnly: true
+        cancelled_deliveries:
+          type: integer
+          readOnly: true
+        average_rating:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+          readOnly: true
+        total_reviews:
+          type: integer
+          readOnly: true
+        total_earnings:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        pending_commission:
+          type: string
+          readOnly: true
+        active_orders:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_online:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - active_orders
+      - address
+      - approved_at
+      - average_rating
+      - bank_account_number
+      - bank_holder_name
+      - bank_ifsc_code
+      - bank_name
+      - cancelled_deliveries
+      - city
+      - completed_deliveries
+      - created_at
+      - id
+      - id_number
+      - id_type
+      - last_online
+      - license_expires
+      - license_number
+      - pending_commission
+      - phone_number
+      - postal_code
+      - state
+      - total_deliveries
+      - total_earnings
+      - total_reviews
+      - updated_at
+      - user_email
+      - user_name
+      - vehicle_type
+    DeliveryCommission:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        agent_name:
+          type: string
+          readOnly: true
+        base_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        distance_bonus:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        time_bonus:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        rating_bonus:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        deductions:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        total_commission:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        status:
+          $ref: '#/components/schemas/StatusEaaEnum'
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - agent_name
+      - approved_at
+      - base_fee
+      - created_at
+      - id
+      - paid_at
+      - total_commission
+    IdTypeEnum:
+      enum:
+      - aadhar
+      - passport
+      - pan
+      - drivers_license
+      type: string
+      description: |-
+        * `aadhar` - Aadhar
+        * `passport` - Passport
+        * `pan` - PAN
+        * `drivers_license` - Driver's License
+    PaginatedProductListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductList'
+    PatchedProductCreateUpdate:
+      type: object
+      description: Serializer for creating/updating products
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        status:
+          $ref: '#/components/schemas/StatusA3eEnum'
+    ProductCreateUpdate:
+      type: object
+      description: Serializer for creating/updating products
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        status:
+          $ref: '#/components/schemas/StatusA3eEnum'
+      required:
+      - description
+      - name
+      - price
+      - quantity
+    ProductDetail:
+      type: object
+      description: Product detail serializer with full information
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        vendor:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        available_quantity:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusA3eEnum'
+        is_blocked:
+          type: boolean
+        blocked_reason:
+          type: string
+          nullable: true
+        total_sold:
+          type: integer
+          readOnly: true
+        average_rating:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+          readOnly: true
+        total_reviews:
+          type: integer
+          readOnly: true
+        views_count:
+          type: integer
+          readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - available_quantity
+      - average_rating
+      - created_at
+      - description
+      - id
+      - images
+      - name
+      - price
+      - quantity
+      - total_reviews
+      - total_sold
+      - updated_at
+      - vendor
+      - views_count
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        image:
+          type: string
+          format: uri
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - id
+      - image
+      - uploaded_at
+    ProductList:
+      type: object
+      description: Serializer for product list view
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        vendor_name:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        status:
+          $ref: '#/components/schemas/StatusA3eEnum'
+        is_blocked:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - name
+      - price
+      - quantity
+      - vendor_name
+    StatusA3eEnum:
+      enum:
+      - active
+      - inactive
+      type: string
+      description: |-
+        * `active` - Active
+        * `inactive` - Inactive
+    StatusEaaEnum:
+      enum:
+      - pending
+      - approved
+      - processing
+      - paid
+      - failed
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `approved` - Approved
+        * `processing` - Processing
+        * `paid` - Paid
+        * `failed` - Failed
+    VehicleTypeEnum:
+      enum:
+      - bicycle
+      - motorcycle
+      - scooter
+      - car
+      - van
+      - truck
+      - on_foot
+      type: string
+      description: |-
+        * `bicycle` - Bicycle
+        * `motorcycle` - Motorcycle
+        * `scooter` - Scooter
+        * `car` - Car
+        * `van` - Van
+        * `truck` - Truck
+        * `on_foot` - On Foot
+    VendorCommission:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order_id:
+          type: string
+          readOnly: true
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        order_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        commission_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        commission_percentage:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusEaaEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required:
+      - approved_at
+      - commission_amount
+      - commission_percentage
+      - commission_rate
+      - created_at
+      - id
+      - order_amount
+      - order_id
+      - paid_at
+    VendorDashboard:
+      type: object
+      description: Comprehensive vendor dashboard data
+      properties:
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/VendorProfileDetail'
+          readOnly: true
+        order_summary:
+          allOf:
+          - $ref: '#/components/schemas/VendorOrderSummary'
+          readOnly: true
+        recent_orders:
+          type: string
+          readOnly: true
+        recent_analytics:
+          type: string
+          readOnly: true
+        pending_commissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VendorCommission'
+          readOnly: true
+      required:
+      - order_summary
+      - pending_commissions
+      - profile
+      - recent_analytics
+      - recent_orders
+    VendorOrderSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        total_orders:
+          type: integer
+          readOnly: true
+        pending_orders:
+          type: integer
+          readOnly: true
+        processing_orders:
+          type: integer
+          readOnly: true
+        shipped_orders:
+          type: integer
+          readOnly: true
+        delivered_orders:
+          type: integer
+          readOnly: true
+        cancelled_orders:
+          type: integer
+          readOnly: true
+        returned_orders:
+          type: integer
+          readOnly: true
+        total_customers:
+          type: integer
+          readOnly: true
+        repeat_customers:
+          type: integer
+          readOnly: true
+        total_revenue:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        total_commission_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        pending_commission:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        pending_commission_amount:
+          type: string
+          readOnly: true
+        average_rating:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+          readOnly: true
+        total_reviews:
+          type: integer
+          readOnly: true
+      required:
+      - average_rating
+      - cancelled_orders
+      - delivered_orders
+      - id
+      - pending_commission
+      - pending_commission_amount
+      - pending_orders
+      - processing_orders
+      - repeat_customers
+      - returned_orders
+      - shipped_orders
+      - total_commission_paid
+      - total_customers
+      - total_orders
+      - total_revenue
+      - total_reviews
+    VendorProfileDetail:
+      type: object
+      description: Detailed vendor profile serializer
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        shop_name:
+          type: string
+          maxLength: 100
+        shop_description:
+          type: string
+        address:
+          type: string
+        business_type:
+          $ref: '#/components/schemas/BusinessTypeEnum'
+        user_email:
+          type: string
+          readOnly: true
+        user_phone:
+          type: string
+          readOnly: true
+        gst_number:
+          type: string
+          nullable: true
+          maxLength: 15
+        pan_number:
+          type: string
+          nullable: true
+          maxLength: 10
+        pan_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        approval_status:
+          allOf:
+          - $ref: '#/components/schemas/ApprovalStatusEnum'
+          readOnly: true
+        rejection_reason:
+          type: string
+          nullable: true
+        is_blocked:
+          type: boolean
+          readOnly: true
+        blocked_reason:
+          type: string
+          nullable: true
+        bank_holder_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        bank_account_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        bank_ifsc_code:
+          type: string
+          nullable: true
+          maxLength: 11
+        shipping_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        total_products:
+          type: integer
+          readOnly: true
+        total_orders:
+          type: integer
+          readOnly: true
+        total_revenue:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        average_rating:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,1}(?:\.\d{0,2})?$
+          readOnly: true
+        total_reviews:
+          type: integer
+          readOnly: true
+        products_count:
+          type: string
+          readOnly: true
+        pending_commission:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - address
+      - approval_status
+      - average_rating
+      - business_type
+      - created_at
+      - id
+      - is_blocked
+      - pending_commission
+      - products_count
+      - shop_description
+      - shop_name
+      - total_orders
+      - total_products
+      - total_revenue
+      - total_reviews
+      - updated_at
+      - user_email
+      - user_phone
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

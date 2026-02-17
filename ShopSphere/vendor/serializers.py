@@ -279,8 +279,8 @@ class VendorProfileCreateSerializer(serializers.ModelSerializer):
 
 class VendorDashboardSerializer(serializers.Serializer):
     """Comprehensive vendor dashboard data"""
-    profile = VendorProfileDetailSerializer(source='*', read_only=True)
-    order_summary = VendorOrderSummarySerializer(source='order_summary', read_only=True)
+    profile = VendorProfileDetailSerializer(read_only=True)
+    order_summary = VendorOrderSummarySerializer(read_only=True)
     recent_orders = serializers.SerializerMethodField()
     recent_analytics = serializers.SerializerMethodField()
     pending_commissions = VendorCommissionSerializer(many=True, read_only=True)

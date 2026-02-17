@@ -9,7 +9,7 @@ urlpatterns = [
 
     # Shop / Product
    
-    path('', views.get_product, name='user_products'),
+    path('userProducts', views.get_product, name='user_products'),
 
     # Cart
     path('cart', views.cart_view, name='cart'),
