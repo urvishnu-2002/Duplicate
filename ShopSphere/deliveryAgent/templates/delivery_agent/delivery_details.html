@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Profile - E-Commerce Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FF9966 0%, #FF5E62 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-header h1 {
+            color: #333;
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+
+        .form-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #FF5E62;
+            box-shadow: 0 0 5px rgba(255, 94, 98, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #FF9966 0%, #FF5E62 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 94, 98, 0.4);
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        <div class="form-header">
+            <h1>Complete Your Profile</h1>
+            <p>Provide your delivery and banking details</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="address">Residential Address</label>
+                <textarea id="address" name="address" required placeholder="Your full address"></textarea>
+            </div>
+
+            <div class="section-title">Vehicle & License Details</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="vehicle_type">Vehicle Type</label>
+                    <select id="vehicle_type" name="vehicle_type" required>
+                        <option value="bike">Bike</option>
+                        <option value="scooter">Scooter</option>
+                        <option value="car">Car</option>
+                        <option value="van">Van</option>
+                        <option value="truck">Truck</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicle_number">Vehicle Number</label>
+                    <input type="text" id="vehicle_number" name="vehicle_number" required
+                        placeholder="e.g. AB-12-CD-3456">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="driving_license_number">Driving License Number</label>
+                    <input type="text" id="driving_license_number" name="driving_license_number" required
+                        placeholder="DL Number">
+                </div>
+
+                <div class="form-group">
+                    <label for="dl_image">Upload License Image</label>
+                    <input type="file" id="dl_image" name="dl_image" accept=".jpg,.jpeg,.png,.pdf">
+                </div>
+            </div>
+
+            <div class="section-title">Bank Details (For Payouts)</div>
+
+            <div class="form-group">
+                <label for="bank_holder_name">Account Holder Name</label>
+                <input type="text" id="bank_holder_name" name="bank_holder_name" placeholder="Name as per bank records">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="bank_account_number">Account Number</label>
+                    <input type="text" id="bank_account_number" name="bank_account_number"
+                        placeholder="Bank Account Number">
+                </div>
+
+                <div class="form-group">
+                    <label for="bank_ifsc_code">IFSC Code</label>
+                    <input type="text" id="bank_ifsc_code" name="bank_ifsc_code" placeholder="IFSC Code">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Submit for Approval</button>
+        </form>
+    </div>
+</body>
+
+</html>
