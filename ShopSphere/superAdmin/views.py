@@ -6,7 +6,8 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.db.models import Q
 from django.urls import reverse
 from vendor.models import VendorProfile, Product
-from .models import VendorApprovalLog, ProductApprovalLog
+from deliveryAgent.models import DeliveryAgentProfile
+from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 from rest_framework.permissions import AllowAny,IsAuthenticated
 def is_mainapp_admin(user):
     return True
@@ -19,9 +20,6 @@ def admin_required(view_func):
             return redirect('admin_login')
         return view_func(request, *args, **kwargs)
     return wrapper
-
-
-
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -359,3 +357,176 @@ def unblock_product(request, product_id):
     return render(request, 'mainApp/unblock_product.html', {
         'product': product
     })
+
+@admin_required
+def manage_agent_requests(request):
+    status_filter = request.GET.get('status', 'pending')
+
+    if status_filter == 'all':
+        agents = DeliveryAgentProfile.objects.all().order_by('-created_at')
+    else:
+        agents = DeliveryAgentProfile.objects.filter(approval_status=status_filter).order_by('-created_at')
+
+    context = {
+        'agents': agents,
+        'current_status': status_filter,
+        'total': agents.count()
+    }
+    return render(request, 'mainApp/manage_agent_requests.html', context)
+
+@admin_required
+def agent_request_detail(request, agent_id):
+
+    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    approval_logs = agent.approval_logs.all()
+
+    context = {
+        'agent': agent,
+        'approval_logs': approval_logs
+    }
+
+    return render(request, 'mainApp/agent_request_detail.html', context)
+
+@admin_required
+def approve_agent(request, agent_id):
+
+    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+
+    if request.method == 'POST':
+        agent.approval_status = 'approved'
+        agent.is_blocked = False
+        agent.blocked_reason = None
+        agent.rejection_reason = None
+        agent.save()
+
+        user = agent.user
+        user.role = 'delivery_agent'
+        user.save()
+
+        DeliveryAgentApprovalLog.objects.create(
+            agent=agent,
+            admin_user=request.user,
+            action='approved',
+            reason=request.POST.get('reason', '')
+        )
+
+        return redirect('agent_request_detail', agent_id=agent.id)
+    
+    return render(request, 'mainApp/approve_agent.html', {
+        'agent': agent
+    })
+
+@admin_required
+def reject_agent(request, agent_id):
+
+    agent = get_object_or_404(DelieveryAgentProfile, id=agent_id)
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'No reason provided')
+        agent.approval_status = 'rejected'
+        agent.rejection_reason = reason
+        agent.save()
+
+        DeliveryAgentApprovalLog.objects.create(
+            agent=agent,
+            admin_user=request.user,
+            action='rejected',
+            reason=reason
+        )
+
+        return redirect('agent_request_detail', agent_id=agent.id)
+    
+    return render(request, 'mainApp/reject_agent.html', {
+        'agent': agent
+    })
+
+@admin_required
+def manage_agent(request):
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    block_filter = request.GET.get('blocked', '')
+
+    agents = DeliveryAgentProfile.objects.all()
+
+    if search_query:
+        agents = agents.filter(
+            Q(user__username__icontains=search_query) |
+            Q(user__email__icontains=search_query)
+        )
+
+    if status_filter:
+        agents = agents.filter(approval_status=status_filter)
+    
+    if block_filter == 'blocked':
+        agents = agents.filter(is_blocked=True)
+    elif block_filter == 'active':
+        agents = agents.filter(is_blocked=False)
+
+    agents = agents.order_by('-created_at')
+
+    context = {
+        'agents': agents,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'block_filter': block_filter,
+    }
+
+    return render(request, 'mainApp/manage_agents.html', context)
+
+@admin_required
+def block_agent(request, agent_id):
+    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'No reason provided')
+        agent.is_blocked = True
+        agent.blocked_reason = reason
+        agent.save()
+
+        DeliveryAgentApprovalLog.objects.create(
+            agent=agent,
+            admin_user=request.user,
+            action='blocked',
+            reason=reason
+        )
+
+        agent.oders.update(is_blocked=True, blocked_reason=f'Delivery agent blocked: {reason}')
+
+        return redirect('agent_request_detail', agent_id=agent.id)
+
+    return render(request, 'mainApp/block_agent.html', {
+        'agent': agent
+    })
+
+@admin_required
+def unblock_agent(request, agent_id):
+    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+        agent.is_blocked = False
+        agent.blocked_reason = None
+        agent.save()
+        DeliveryAgentApprovalLog.objects.create(
+            agent=agent,
+            admin_user=request.user,
+            action='unblocked',
+            reason=reason
+        )
+        return redirect('agent_request_detail', agent_id=agent.id)
+    return render(request, 'mainApp/unblock_agent.html', {
+        'agent': agent
+    })
+
+@admin_required
+def agent_detail(request, agent_id):
+    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    orders = agent.orders.all()
+    approval_logs = agent.approval_logs.all()
+
+    context = {
+        'agent': agent,
+        'orders': orders,
+        'approval_logs': approval_logs,
+    }
+
+    return render(request, 'mainApp/agent_detail.html', context)

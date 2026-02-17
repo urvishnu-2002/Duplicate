@@ -7,14 +7,19 @@ from django.contrib.auth import get_user_model
 
 from django.db.models import Q
 from vendor.models import VendorProfile, Product
-from .models import VendorApprovalLog, ProductApprovalLog
+from deliveryAgent.models import Agent
+from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 from .serializers import (
     VendorApprovalLogSerializer, ProductApprovalLogSerializer,
     AdminVendorDetailSerializer, AdminProductDetailSerializer,
     AdminVendorListSerializer, AdminProductListSerializer,
     ApproveVendorSerializer, RejectVendorSerializer,
     BlockVendorSerializer, UnblockVendorSerializer,
-    BlockProductSerializer, UnblockProductSerializer
+    BlockProductSerializer, UnblockProductSerializer,
+    AdminDeliveryAgentDetailSerializer, AdminDeliveryAgentListSerializer,
+    ApproveDeliveryAgentSerializer, RejectDeliveryAgentSerializer,
+    BlockDeliveryAgentSerializer, UnblockDeliveryAgentSerializer,
+    DeliveryAgentApprovalLogSerializer
 )
 
 class AdminLoginRequiredMixin:
@@ -290,4 +295,162 @@ class DashboardView(AdminLoginRequiredMixin, generics.GenericAPIView):
                 'approved': approved_products,
                 'blocked': blocked_products
             }
+        })
+
+
+class DeliveryAgentRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
+    """Manage delivery agent approval requests"""
+    queryset = Agent.objects.filter(approval_status='pending')
+    serializer_class = AdminDeliveryAgentDetailSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = Agent.objects.filter(approval_status='pending')
+        
+        search = request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(company_name__icontains=search) |
+                Q(email__icontains=search)
+            )
+        
+        serializer = AdminDeliveryAgentDetailSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        agent = self.get_object()
+        
+        if agent.approval_status != 'pending':
+            return Response({
+                'error': 'Only pending agents can be approved'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = ApproveDeliveryAgentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        agent.approval_status = 'approved'
+        agent.save()
+        
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='approved',
+            reason=serializer.validated_data.get('reason', '')
+        )
+        
+        return Response({
+            'message': 'Delivery agent approved successfully',
+            'agent': AdminDeliveryAgentDetailSerializer(agent).data
+        })
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        agent = self.get_object()
+        
+        if agent.approval_status != 'pending':
+            return Response({
+                'error': 'Only pending agents can be rejected'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = RejectDeliveryAgentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        agent.approval_status = 'rejected'
+        agent.rejection_reason = serializer.validated_data['reason']
+        agent.save()
+        
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='rejected',
+            reason=serializer.validated_data['reason']
+        )
+        
+        return Response({
+            'message': 'Delivery agent rejected successfully',
+            'agent': AdminDeliveryAgentDetailSerializer(agent).data
+        })
+
+
+class DeliveryAgentManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
+    """Manage approved delivery agents"""
+    queryset = Agent.objects.exclude(approval_status='pending')
+    serializer_class = AdminDeliveryAgentListSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def list(self, request, *args, **kwargs):
+        queryset = Agent.objects.all()
+        
+        status_filter = request.query_params.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(approval_status=status_filter)
+        
+        search = request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(company_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(username__icontains=search)
+            )
+        
+        blocked_filter = request.query_params.get('blocked', None)
+        if blocked_filter == 'true':
+            queryset = queryset.filter(is_blocked=True)
+        elif blocked_filter == 'false':
+            queryset = queryset.filter(is_blocked=False)
+        
+        serializer = AdminDeliveryAgentListSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def detail(self, request, pk=None):
+        agent = self.get_object()
+        serializer = AdminDeliveryAgentDetailSerializer(agent)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def block(self, request, pk=None):
+        agent = self.get_object()
+        
+        serializer = BlockDeliveryAgentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        agent.is_blocked = True
+        agent.blocked_reason = serializer.validated_data['reason']
+        agent.save()
+        
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='blocked',
+            reason=serializer.validated_data['reason']
+        )
+        
+        return Response({
+            'message': 'Delivery agent blocked successfully',
+            'agent': AdminDeliveryAgentDetailSerializer(agent).data
+        })
+    
+    @action(detail=True, methods=['post'])
+    def unblock(self, request, pk=None):
+        agent = self.get_object()
+        
+        serializer = UnblockDeliveryAgentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        agent.is_blocked = False
+        agent.blocked_reason = ''
+        agent.save()
+        
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='unblocked',
+            reason=serializer.validated_data.get('reason', '')
+        )
+        
+        return Response({
+            'message': 'Delivery agent unblocked successfully',
+            'agent': AdminDeliveryAgentDetailSerializer(agent).data
         })

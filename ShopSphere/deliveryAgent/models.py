@@ -8,6 +8,19 @@ class Agent(AbstractUser):
     company_name = models.CharField(max_length=100, blank=True, null=True)
     vehicle_type = models.CharField(max_length=20, blank=True, null=True)
 
+    # Approval status
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
+    rejection_reason = models.TextField(blank=True, null=True)
+    
+    # Account status
+    is_blocked = models.BooleanField(default=False)
+    blocked_reason = models.TextField(blank=True, null=True)
+
     # Overriding these to resolve clashes with default auth.User
     groups = models.ManyToManyField(
         Group,
