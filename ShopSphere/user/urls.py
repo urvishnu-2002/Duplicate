@@ -23,4 +23,11 @@ urlpatterns = [
     path('my_orders', views.my_orders, name='my_orders'),
     path('address', views.address_page, name="address_page"),
     path('delete-address/<int:id>', views.delete_address, name="delete_address"),
+
+    # #Reviews
+    # '''path('my_reviews', views.user_reviews, name='user_reviews'),
+    # path('submit_review/<int:product_id>', views.submit_review, name='submit_review'),
+    # path('delete_review/<int:review_id>', views.delete_review, name='delete_review'),
+    # path('edit_review/<int:review_id>', views.edit_review, name='edit_review'),'''
+    # path('review_product/<int:product_id>', views.review_product, name='review_product')
 ]

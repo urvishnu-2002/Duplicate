@@ -2,11 +2,16 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 
 class AuthUser(AbstractUser):
     """Extended user model with role-based access"""
+    """Extended user model with role-based access"""
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=False)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    profile_image = models.ImageField(upload_to='profiles/', blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
     profile_image = models.ImageField(upload_to='profiles/', blank=True, null=True)
 
@@ -14,8 +19,20 @@ class AuthUser(AbstractUser):
         ('customer', 'Customer'),
         ('vendor', 'Vendor'),
         ('delivery', 'Delivery Agent'),
+        ('delivery', 'Delivery Agent'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
+    
+    # Account status
+    is_blocked = models.BooleanField(default=False)
+    blocked_reason = models.TextField(blank=True, null=True)
+    suspended_until = models.DateTimeField(blank=True, null=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
+    class Meta:
+        ordering = ['-date_joined']
     
     # Account status
     is_blocked = models.BooleanField(default=False)
@@ -62,8 +79,40 @@ class WishlistItem(models.Model):
 
     class Meta:
         unique_together = ('wishlist', 'product')
+    def is_account_active(self):
+        """Check if account is truly active (not blocked/suspended)"""
+        from django.utils import timezone
+        if self.is_blocked:
+            return False
+        if self.suspended_until and timezone.now() < self.suspended_until:
+            return False
+        return self.is_active
+
+
+class Wishlist(models.Model):
+    """User's wishlist for products"""
+    user = models.OneToOneField(AuthUser, on_delete=models.CASCADE, related_name='wishlist')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'Wishlists'
 
     def __str__(self):
+        return f"{self.user.username}'s Wishlist"
+
+
+class WishlistItem(models.Model):
+    """Items in wishlist"""
+    wishlist = models.ForeignKey(Wishlist, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('vendor.Product', on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('wishlist', 'product')
+
+    def __str__(self):
+        return f"{self.product.name} in {self.wishlist.user.username}'s wishlist"
         return f"{self.product.name} in {self.wishlist.user.username}'s wishlist"
 
 
@@ -75,8 +124,24 @@ class Cart(models.Model):
 
     class Meta:
         verbose_name_plural = 'Carts'
+    """Shopping cart for users"""
+    user = models.OneToOneField(AuthUser, on_delete=models.CASCADE, related_name='cart')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'Carts'
 
     def __str__(self):
+        return f"{self.user.username}'s Cart"
+
+    def get_total(self):
+        """Calculate total cart value"""
+        return sum(item.get_total() for item in self.items.all())
+
+    def get_item_count(self):
+        """Get total items in cart"""
+        return sum(item.quantity for item in self.items.all())
         return f"{self.user.username}'s Cart"
 
     def get_total(self):
@@ -97,13 +162,51 @@ class CartItem(models.Model):
 
     class Meta:
         unique_together = ('cart', 'product')
+    """Individual items in cart"""
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('vendor.Product', on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1, validators=[MinValueValidator(1)])
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('cart', 'product')
 
     def __str__(self):
         return f"{self.quantity}x {self.product.name} in {self.cart.user.username}'s cart"
 
     def get_total(self):
         """Calculate total for this cart item"""
+    def __str__(self):
+        return f"{self.quantity}x {self.product.name} in {self.cart.user.username}'s cart"
+
+    def get_total(self):
+        """Calculate total for this cart item"""
         return self.product.price * self.quantity
+
+
+class Address(models.Model):
+    """Delivery addresses for users"""
+    user = models.ForeignKey(AuthUser, on_delete=models.CASCADE, related_name='addresses')
+    name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=15)
+    email = models.EmailField(blank=True)
+    address_line1 = models.CharField(max_length=255)
+    address_line2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    pincode = models.CharField(max_length=10)
+    country = models.CharField(max_length=100, default='India')
+    
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Addresses'
+        ordering = ['-is_default', '-created_at']
+
+    def __str__(self):
+        return f"{self.name} - {self.city}, {self.state}"
+
 
 
 class Address(models.Model):
@@ -192,9 +295,19 @@ class Order(models.Model):
     def can_be_returned(self):
         """Check if order can be returned"""
         return self.status == 'delivered'
+        return f"Order {self.order_number}"
+
+    def can_be_cancelled(self):
+        """Check if order can be cancelled"""
+        return self.status in ['pending', 'confirmed']
+
+    def can_be_returned(self):
+        """Check if order can be returned"""
+        return self.status == 'delivered'
 
 
 class OrderItem(models.Model):
+    """Individual items in an order"""
     """Individual items in an order"""
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey('vendor.Product', on_delete=models.SET_NULL, null=True)

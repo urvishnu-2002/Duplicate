@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from decimal import Decimal
 
-from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address
+from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address, Review
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer, AddressSerializer
 from .forms import AddressForm
 import uuid
@@ -321,3 +321,26 @@ def delete_address(request, id):
 def logout_api(request):
     logout(request)
     return redirect('user_login')
+
+@login_required
+def review_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    user = request.user
+    if request.method == "POST":
+        rating = request.POST.get('rating')
+        if rating and rating.isdigit() and 1 <= int(rating) <= 5:
+            Review.objects.create(
+                user=request.user,
+                Product=product,
+                rating=int(rating),
+                comment=request.POST.get('comment', ''),
+                pictures=request.FILES.get('pictures')
+            )
+            return redirect('home')
+        return render(request, 'review.html', {'product': product, 'error': 'Please provide a valid rating between 1 and 5.'})
+    return render(request, 'review.html', {'product': product})
+
+# @login_required
+# def user_reviews(request):
+#     reviews = Review.objects.filter(user=request.user)
+#     return render(request, 'user_reviews.html', {'reviews': reviews})

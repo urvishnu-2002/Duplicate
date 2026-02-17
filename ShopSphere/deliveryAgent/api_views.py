@@ -531,4 +531,8 @@ class DeliveryAgentDashboardView(generics.RetrieveAPIView):
             serializer = self.get_serializer(agent)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
+<<<<<<< HEAD
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+=======
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+>>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9

@@ -176,4 +176,3 @@ class CouponUsageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CouponUsage
         fields = '__all__'
-
