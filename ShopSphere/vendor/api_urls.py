@@ -1,29 +1,25 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework.authtoken import views as drf_views
 from .api_views import (
-    RegisterView, LoginView, VendorDetailsView, VendorDashboardView,
-    VendorProfileDetailView, ProductViewSet, ApprovalStatusView, UserProfileView
+    VendorDashboardView, ProductViewSet,
+    VendorOrdersViewSet, VendorSalesAnalyticsViewSet,
+    VendorCommissionViewSet, VendorPaymentViewSet,
+    VendorOrderSummaryViewSet
 )
 
+# Create router for viewsets
 router = DefaultRouter()
-router.register(r'products', ProductViewSet, basename='product')
+router.register(r'products', ProductViewSet, basename='vendor-product')
+router.register(r'orders', VendorOrdersViewSet, basename='vendor-order')
+router.register(r'sales-analytics', VendorSalesAnalyticsViewSet, basename='vendor-analytics')
+router.register(r'commissions', VendorCommissionViewSet, basename='vendor-commission')
+router.register(r'payments', VendorPaymentViewSet, basename='vendor-payment')
+router.register(r'order-summary', VendorOrderSummaryViewSet, basename='vendor-order-summary')
 
 urlpatterns = [
-    # Authentication endpoints
-    path('register/', RegisterView.as_view(), name='api_register'),
-    path('login/', LoginView.as_view(), name='api_login'),
-    path('auth-token/', drf_views.obtain_auth_token, name='api_token_auth'),
+    # Dashboard
+    path('dashboard/', VendorDashboardView.as_view(), name='vendor_dashboard'),
     
-    # Vendor endpoints
-    path('vendor/profile/', VendorProfileDetailView.as_view(), name='vendor_profile'),
-    path('vendor/details/', VendorDetailsView.as_view(), name='api_vendor_details'),
-    path('vendor/dashboard/', VendorDashboardView.as_view(), name='vendor_dashboard'),
-    path('vendor/approval-status/', ApprovalStatusView.as_view(), name='approval_status'),
-    
-    # User endpoints
-    path('user/profile/', UserProfileView.as_view(), name='user_profile'),
-    
-    # Products
+    # Routed endpoints
     path('', include(router.urls)),
 ]

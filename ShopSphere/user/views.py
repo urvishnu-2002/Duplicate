@@ -5,10 +5,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem, Address
+from decimal import Decimal
+
+from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer, AddressSerializer
 from .forms import AddressForm
-from vendor.models import Product as VendorProduct
+import uuid
+from django.db import transaction
+from vendor.models import Product
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
@@ -61,16 +65,19 @@ def login_api(request):
                 "role": user.role
             })
         else:
-            return redirect('home')
+            return redirect('user_products')
 
-    if request.accepted_renderer.format == 'json':
-        return Response({"error": "Invalid credentials"}, status=401)
-    return render(request, "user_login.html", {"error": "Invalid credentials"})
+    return Response({"error": "Invalid credentials"}, status=401)
+
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
+
+
+#permission_classes([IsAuthenticated])
+
 def home_api(request):
-    products = VendorProduct.objects.all()
+    products = Product.objects.all()
     
     if request.accepted_renderer.format == 'json':
         serializer = ProductSerializer(products, many=True)
@@ -91,7 +98,7 @@ def home_api(request):
     })
 
 def get_product(request):
-    products = VendorProduct.objects.all()
+    products = Product.objects.all()
     cart_count = 0
     if request.user.is_authenticated:
         try:
@@ -109,33 +116,22 @@ def get_product(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request, product_id):
-    # Depending on your Product model, you might need to import VendorProduct or use the local Product.
-    # Looking at home_api, it displays VendorProduct.
-    product = get_object_or_404(VendorProduct, id=product_id)
+    product = get_object_or_404(Product, id=product_id)
     cart, created = Cart.objects.get_or_create(user=request.user)
     
-    # We need to map VendorProduct to our local Product model if they are different, 
-    # OR the CartItem should point to VendorProduct.
-    # Checking user/models.py: CartItem points to 'Product' which has name and price.
-    # If VendorProduct and Product are separate tables, this might fail.
-    # Let's assume you want to add the VendorProduct.
-    
-    # Fallback to local Product if thats what CartItem expects
-    local_product, lp_created = Product.objects.get_or_create(
-        name=product.name,
-        defaults={'price': product.price}
-    )
-    
-    cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=local_product)
+    cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product)
     
     if not item_created:
         cart_item.quantity += 1
         cart_item.save()
     
     if request.accepted_renderer.format == 'json':
-        return Response({"message": "Item added to cart", "cart_count": cart.items.count()})
+        return Response({
+            "message": "Product added to cart",
+            "cart_count": sum(item.quantity for item in cart.items.all())
+        })
         
-    return redirect('home')
+    return redirect('cart')
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -147,7 +143,7 @@ def cart_view(request):
         serializer = CartSerializer(cart)
         return Response(serializer.data)
         
-    total_price = sum(item.total_price() for item in cart_items)
+    total_price = sum(item.get_total() for item in cart_items)
     
     return render(request, "cart.html", {
         "cart_items": cart_items, 
@@ -165,7 +161,7 @@ def checkout_view(request):
              return Response({"message": "Cart is empty"}, status=400)
         return redirect('cart')
         
-    total_price = sum(item.total_price() for item in cart_items)
+    total_price = sum(item.get_total() for item in cart_items)
     items_count = sum(item.quantity for item in cart_items)
     
     if request.accepted_renderer.format == 'json':
@@ -184,79 +180,83 @@ def checkout_view(request):
 @permission_classes([IsAuthenticated])
 def process_payment(request):
     payment_mode = request.data.get('payment_mode')
-    transaction_id = request.data.get('transaction_id')
+    transaction_id = request.data.get('transaction_id') or str(uuid.uuid4())[:12]
     items_from_request = request.data.get('items')
+    order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
 
     if not payment_mode:
-        if request.accepted_renderer.format == 'json':
-            return Response({"error": "Payment mode required"}, status=400)
-        return redirect('checkout')
+        return Response({"error": "Payment mode required"}, status=400)
 
-    order = None
-
-    # CASE 1: Items passed directly (e.g. from frontend state)
-    if items_from_request:
-        summary_items = [f"{i.get('quantity', 1)} x {i.get('name')}" for i in items_from_request]
-        item_names_str = ", ".join(summary_items)
-        
-        try:
-            order = Order.objects.create(
-                user=request.user,
-                payment_mode=payment_mode,
-                transaction_id=transaction_id,
-                item_names=item_names_str
-            )
-            for item_data in items_from_request:
-                OrderItem.objects.create(
-                    order=order,
-                    product_name=item_data.get('name'),
-                    quantity=item_data.get('quantity', 1),
-                    price=item_data.get('price', 0)
+    try:
+        with transaction.atomic():
+            # CASE 1: Items passed directly (frontend state)
+            if items_from_request:
+                total_amount = Decimal('0.00')
+                for item_data in items_from_request:
+                    price = Decimal(str(item_data.get('price', 0)))
+                    quantity = int(item_data.get('quantity', 1))
+                    total_amount += price * quantity
+                
+                order = Order.objects.create(
+                    user=request.user,
+                    order_number=order_number,
+                    payment_method=payment_mode,
+                    transaction_id=transaction_id,
+                    total_amount=total_amount,
+                    subtotal=total_amount
                 )
-            # Clear database cart as well
-            Cart.objects.filter(user=request.user).delete()
-        except Exception as e:
-             return Response({"error": f"Database Error: {str(e)}"}, status=500)
-            
-    # CASE 2: Use items from the database cart
-    else:
-        try:
-            cart = Cart.objects.get(user=request.user)
-            cart_items = cart.items.all()
-            if not cart_items:
-                if request.accepted_renderer.format == 'json':
+                
+                for item_data in items_from_request:
+                    price = Decimal(str(item_data.get('price', 0)))
+                    quantity = int(item_data.get('quantity', 1))
+                    OrderItem.objects.create(
+                        order=order,
+                        product_name=item_data.get('name'),
+                        quantity=quantity,
+                        product_price=price,
+                        subtotal=price * quantity
+                    )
+                Cart.objects.filter(user=request.user).delete()
+
+            # CASE 2: Use items from the database cart
+            else:
+                cart = Cart.objects.get(user=request.user)
+                cart_items = cart.items.all()
+                if not cart_items:
                     return Response({"error": "Cart is empty"}, status=400)
-                return redirect('cart')
 
-            summary_items = [f"{item.quantity} x {item.product.name}" for item in cart_items]
-            item_names_str = ", ".join(summary_items)
-
-            order = Order.objects.create(
-                user=request.user,
-                payment_mode=payment_mode,
-                transaction_id=transaction_id,
-                item_names=item_names_str
-            )
-
-            for item in cart_items:
-                OrderItem.objects.create(
-                    order=order,
-                    product_name=item.product.name,
-                    quantity=item.quantity,
-                    price=item.product.price
+                total_amount = sum(item.get_total() for item in cart_items)
+                
+                order = Order.objects.create(
+                    user=request.user,
+                    order_number=order_number,
+                    payment_method=payment_mode,
+                    transaction_id=transaction_id,
+                    total_amount=total_amount,
+                    subtotal=total_amount
                 )
-            
-            cart.items.all().delete()
-            
-        except Cart.DoesNotExist:
-            if request.accepted_renderer.format == 'json':
-                return Response({"error": "Cart not found"}, status=404)
-            return redirect('home')
+
+                for item in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        product_name=item.product.name,
+                        quantity=item.quantity,
+                        product_price=item.product.price,
+                        subtotal=item.get_total()
+                    )
+                cart.items.all().delete()
+
+    except Cart.DoesNotExist:
+        return Response({"error": "Cart not found"}, status=404)
+    except Exception as e:
+        return Response({"error": f"Database Error: {str(e)}"}, status=500)
 
     if request.accepted_renderer.format == 'json':
         return Response({
             "success": True,
-            "message": "Payment successful",
+            "message": "Order placed successfully",
+            "order_number": order_number,
             "order_id": order.id
         })
     
@@ -265,7 +265,7 @@ def process_payment(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_orders(request):
-    orders = Order.objects.filter(user=request.user).order_by('-order_date')
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
     
     if request.accepted_renderer.format == 'json':
         serializer = OrderSerializer(orders, many=True)
@@ -277,30 +277,43 @@ def my_orders(request):
 @permission_classes([IsAuthenticated])
 def address_page(request):
     if request.method == 'POST':
-        serializer = AddressSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response({
-                "message": "Address saved successfully",
-                "address": serializer.data
-            }, status=201)
-        return Response(serializer.errors, status=400)
-    
-    addresses = Address.objects.filter(user=request.user)
-    serializer = AddressSerializer(addresses, many=True)
+        # Use Serializer for API/JSON requests
+        if request.accepted_renderer.format == 'json':
+            serializer = AddressSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(user=request.user)
+                return Response({
+                    "message": "Address saved successfully",
+                    "address": serializer.data
+                }, status=201)
+            return Response(serializer.errors, status=400)
+        
+        # Fallback for traditional HTML forms
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user
+            address.save()
+            return redirect('address_page')
+
+    addresses = Address.objects.filter(user=request.user).order_by('-created_at')[:1]
     
     if request.accepted_renderer.format == 'json':
+        serializer = AddressSerializer(addresses, many=True)
         return Response({"addresses": serializer.data})
         
-    return render(request, "address.html", {"addresses": addresses})
+    form = AddressForm()
+    return render(request, "address.html", {"addresses": addresses, "form": form})
 
 @api_view(['POST', 'GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_address(request, id):
     address = get_object_or_404(Address, id=id, user=request.user)
     address.delete()
+    
     if request.accepted_renderer.format == 'json':
         return Response({"message": "Address deleted successfully"})
+        
     return redirect('address_page')
 
 @api_view(['POST', 'GET'])

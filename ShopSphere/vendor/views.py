@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import render
 
 # Create your views here.
@@ -281,7 +282,8 @@ def approval_status_view(request):
 # PRODUCT MANAGEMENT - VENDOR SIDE (UPDATED FOR MULTIPLE IMAGES)
 # ============================================================================
 
-@login_required(login_url='login')
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def add_product_view(request):
     """Add new product with minimum 4 images"""
 
