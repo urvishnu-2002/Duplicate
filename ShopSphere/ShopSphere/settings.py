@@ -108,6 +108,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Authentication
 AUTH_USER_MODEL = 'user.AuthUser'
+AUTH_USER_MODEL = 'deliveryAgent.Agent'
 
 # REST Framework Settings
 REST_FRAMEWORK = {
@@ -164,3 +165,7 @@ import ssl
 
 #EMAIL_SSL_CERTFILE = certifi.where()
 EMAIL_SSL_KEYFILE = None
+
+# Redirect URLs Delivery
+LOGIN_URL = '/delivery/login/'
+LOGOUT_REDIRECT_URL = '/delivery/login/'

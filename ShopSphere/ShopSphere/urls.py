@@ -5,13 +5,14 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('', include('user.urls')),
+    path('', include('deliveryAgent.urls')),
     # Django Admin
     path('admin/', admin.site.urls),
     
     # API endpoints for each app
     path('vendor/', include('vendor.urls')),
     path('superAdmin/', include('superAdmin.urls')),
-    path('deliveryAgent/', include('deliveryAgent.urls')),
+    path('delivery/', include('deliveryAgent.urls')),
 ]
 
 # Serve media files
