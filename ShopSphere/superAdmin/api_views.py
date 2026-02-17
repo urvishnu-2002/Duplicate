@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 
 from django.db.models import Q
 from vendor.models import VendorProfile, Product
-from deliveryAgent.models import Agent
+from deliveryAgent.models import DeliveryProfile
 from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 from .serializers import (
     VendorApprovalLogSerializer, ProductApprovalLogSerializer,
@@ -300,12 +300,12 @@ class DashboardView(AdminLoginRequiredMixin, generics.GenericAPIView):
 
 class DeliveryAgentRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     """Manage delivery agent approval requests"""
-    queryset = Agent.objects.filter(approval_status='pending')
+    queryset = DeliveryProfile.objects.filter(approval_status='pending')
     serializer_class = AdminDeliveryAgentDetailSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def list(self, request, *args, **kwargs):
-        queryset = Agent.objects.filter(approval_status='pending')
+        queryset = DeliveryProfile.objects.filter(approval_status='pending')
         
         search = request.query_params.get('search', None)
         if search:
@@ -375,12 +375,12 @@ class DeliveryAgentRequestViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet
 
 class DeliveryAgentManagementViewSet(AdminLoginRequiredMixin, viewsets.ModelViewSet):
     """Manage approved delivery agents"""
-    queryset = Agent.objects.exclude(approval_status='pending')
+    queryset = DeliveryProfile.objects.exclude(approval_status='pending')
     serializer_class = AdminDeliveryAgentListSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def list(self, request, *args, **kwargs):
-        queryset = Agent.objects.all()
+        queryset = DeliveryProfile.objects.all()
         
         status_filter = request.query_params.get('status', None)
         if status_filter:

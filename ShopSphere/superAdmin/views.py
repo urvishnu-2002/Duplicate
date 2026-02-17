@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.db.models import Q
 from django.urls import reverse
 from vendor.models import VendorProfile, Product
-from deliveryAgent.models import DeliveryAgentProfile
+from deliveryAgent.models import DeliveryProfile
 from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 from rest_framework.permissions import AllowAny,IsAuthenticated
 def is_mainapp_admin(user):
@@ -363,9 +363,9 @@ def manage_agent_requests(request):
     status_filter = request.GET.get('status', 'pending')
 
     if status_filter == 'all':
-        agents = DeliveryAgentProfile.objects.all().order_by('-created_at')
+        agents = DeliveryProfile.objects.all().order_by('-created_at')
     else:
-        agents = DeliveryAgentProfile.objects.filter(approval_status=status_filter).order_by('-created_at')
+        agents = DeliveryProfile.objects.filter(approval_status=status_filter).order_by('-created_at')
 
     context = {
         'agents': agents,
@@ -377,7 +377,7 @@ def manage_agent_requests(request):
 @admin_required
 def agent_request_detail(request, agent_id):
 
-    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
     approval_logs = agent.approval_logs.all()
 
     context = {
@@ -390,7 +390,7 @@ def agent_request_detail(request, agent_id):
 @admin_required
 def approve_agent(request, agent_id):
 
-    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
 
     if request.method == 'POST':
         agent.approval_status = 'approved'
@@ -419,7 +419,7 @@ def approve_agent(request, agent_id):
 @admin_required
 def reject_agent(request, agent_id):
 
-    agent = get_object_or_404(DelieveryAgentProfile, id=agent_id)
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
 
     if request.method == 'POST':
         reason = request.POST.get('reason', 'No reason provided')
@@ -446,7 +446,7 @@ def manage_agent(request):
     status_filter = request.GET.get('status', '')
     block_filter = request.GET.get('blocked', '')
 
-    agents = DeliveryAgentProfile.objects.all()
+    agents = DeliveryProfile.objects.all()
 
     if search_query:
         agents = agents.filter(
@@ -475,7 +475,7 @@ def manage_agent(request):
 
 @admin_required
 def block_agent(request, agent_id):
-    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
 
     if request.method == 'POST':
         reason = request.POST.get('reason', 'No reason provided')
@@ -490,7 +490,7 @@ def block_agent(request, agent_id):
             reason=reason
         )
 
-        agent.oders.update(is_blocked=True, blocked_reason=f'Delivery agent blocked: {reason}')
+        agent.orders.update(is_blocked=True, blocked_reason=f'Delivery agent blocked: {reason}')
 
         return redirect('agent_request_detail', agent_id=agent.id)
 
@@ -500,7 +500,7 @@ def block_agent(request, agent_id):
 
 @admin_required
 def unblock_agent(request, agent_id):
-    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
         agent.is_blocked = False
@@ -519,7 +519,7 @@ def unblock_agent(request, agent_id):
 
 @admin_required
 def agent_detail(request, agent_id):
-    agent = get_object_or_404(DeliveryAgentProfile, id=agent_id)
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
     orders = agent.orders.all()
     approval_logs = agent.approval_logs.all()
 

@@ -286,6 +286,7 @@ def address_page(request):
                     "message": "Address saved successfully",
                     "address": serializer.data
                 }, status=201)
+            print("Address Serializer Errors:", serializer.errors)
             return Response(serializer.errors, status=400)
         
         # Fallback for traditional HTML forms
@@ -296,7 +297,7 @@ def address_page(request):
             address.save()
             return redirect('address_page')
 
-    addresses = Address.objects.filter(user=request.user).order_by('-created_at')[:1]
+    addresses = Address.objects.filter(user=request.user).order_by('-created_at')
     
     if request.accepted_renderer.format == 'json':
         serializer = AddressSerializer(addresses, many=True)

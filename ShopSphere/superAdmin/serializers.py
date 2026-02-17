@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from vendor.models import VendorProfile, Product
-from deliveryAgent.models import Agent
+from deliveryAgent.models import DeliveryProfile
 from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 
 class VendorApprovalLogSerializer(serializers.ModelSerializer):
@@ -79,12 +79,15 @@ class AdminProductListSerializer(serializers.ModelSerializer):
         ]
 
 class AdminDeliveryAgentListSerializer(serializers.ModelSerializer):
+    email = serializers.CharField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
     approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
+    date_joined = serializers.DateTimeField(source='created_at', read_only=True)
     
     class Meta:
-        model = Agent
+        model = DeliveryProfile
         fields = [
-            'id', 'email', 'username', 'company_name', 'approval_status', 'approval_status_display',
+            'id', 'email', 'username', 'vehicle_type', 'approval_status', 'approval_status_display',
             'is_blocked', 'date_joined'
         ]
 
@@ -101,15 +104,19 @@ class DeliveryAgentApprovalLogSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'admin_user', 'timestamp']
 
 class AdminDeliveryAgentDetailSerializer(serializers.ModelSerializer):
+    email = serializers.CharField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    mobile = serializers.CharField(source='user.phone', read_only=True)
+    date_joined = serializers.DateTimeField(source='created_at', read_only=True)
     approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
     approval_logs = DeliveryAgentApprovalLogSerializer(source='approval_logs.all', many=True, read_only=True)
     
     class Meta:
-        model = Agent
+        model = DeliveryProfile
         fields = [
-            'id', 'username', 'email', 'mobile', 'company_name', 'vehicle_type',
-            'license_number', 'approval_status', 'approval_status_display',
-            'rejection_reason', 'is_blocked', 'blocked_reason',
+            'id', 'username', 'email', 'mobile', 'address', 'vehicle_type', 'vehicle_number',
+            'driving_license_number', 'approval_status', 'approval_status_display',
+            'is_blocked', 'blocked_reason',
             'date_joined', 'approval_logs'
         ]
         read_only_fields = ['id', 'date_joined']

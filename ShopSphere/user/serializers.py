@@ -33,9 +33,18 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class AddressSerializer(serializers.ModelSerializer):
+    # Map frontend 'address' to model 'address_line1'
+    address = serializers.CharField(source='address_line1')
+    email = serializers.EmailField(required=False, allow_blank=True)
+    
     class Meta:
         model = Address
-        fields = '__all__'
+        fields = ['id', 'name', 'phone', 'email', 'address', 'city', 'state', 'pincode', 'country', 'is_default']
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+        # User is passed in save() from the view
+        return Address.objects.create(**validated_data)
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

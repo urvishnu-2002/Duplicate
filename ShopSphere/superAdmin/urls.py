@@ -31,11 +31,17 @@ urlpatterns = [
     path('products/<int:product_id>/block/', views.block_product, name='block_product'),
     path('products/<int:product_id>/unblock/', views.unblock_product, name='unblock_product'),
 
+    # Delivery Agent Request Management
+    path('agent-requests/', views.manage_agent_requests, name='manage_agent_requests'),
+    path('agent-requests/<int:agent_id>/', views.agent_request_detail, name='agent_request_detail'),
+    path('agent-requests/<int:agent_id>/approve/', views.approve_agent, name='approve_agent'),
+    path('agent-requests/<int:agent_id>/reject/', views.reject_agent, name='reject_agent'),
+
     # Delivery Agent Management
-    path('delivery-agents/', views.manage_delivery_agents, name='manage_delivery_agents'),
-    path('delivery-agents/<int:agent_id>/', views.delivery_agent_detail, name='delivery_agent_detail'),
-    path('delivery-agents/<int:agent_id>/block/', views.block_delivery_agent, name='block_delivery_agent'),
-    path('delivery-agents/<int:agent_id>/unblock/', views.unblock_delivery_agent, name='unblock_delivery_agent'),
+    path('delivery-agents/', views.manage_agent, name='manage_agent'),
+    path('delivery-agents/<int:agent_id>/', views.agent_detail, name='agent_detail'),
+    path('delivery-agents/<int:agent_id>/block/', views.block_agent, name='block_agent'),
+    path('delivery-agents/<int:agent_id>/unblock/', views.unblock_agent, name='unblock_agent'),
 
     
 ]
