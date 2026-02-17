@@ -199,11 +199,6 @@ def process_payment(request):
         return Response({"error": "Payment mode required"}, status=400)
 
     items_to_process = []
-    
-    # CASE 1: Items are passed directly in the request (Frontend Redux state)
-    if request.accepted_renderer.format == 'json':
-        return Response({"error": "Payment mode required"}, status=400)
-    return redirect('checkout')
 
     order = None
 
