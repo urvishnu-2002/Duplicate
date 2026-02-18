@@ -13,6 +13,10 @@ urlpatterns = [
     path('vendor/', views.vendor_home_view, name='vendor_home'),
     path('approval-status/', views.approval_status_view, name='approval_status'),
     
+    # Binary Data Serving
+    path('serve-image/<int:image_id>/', views.serve_product_image, name='serve_product_image'),
+    path('serve-doc/<int:profile_id>/<str:doc_type>/', views.serve_vendor_document, name='serve_vendor_document'),
+    
     # Product Management
     path('products/add/', views.add_product_view, name='add_product'),
     path('products/<int:product_id>/', views.view_product_view, name='view_product'),

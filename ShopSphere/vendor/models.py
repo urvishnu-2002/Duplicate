@@ -76,6 +76,28 @@ class VendorProfile(models.Model):
 
 
 # ===============================================
+#               CATEGORY MODEL
+# ===============================================
+
+class Category(models.Model):
+    """Category Model for products"""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True, null=True)
+    
+    # Category Image
+    image_data = models.BinaryField(blank=True, null=True)
+    image_name = models.CharField(max_length=255, blank=True, null=True)
+    image_mimetype = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = 'Categories'
+
+    def __str__(self):
+        return self.name
+
+
+# ===============================================
 #               PRODUCT MODEL
 # ===============================================
 
@@ -104,7 +126,10 @@ class Product(models.Model):
     vendor = models.ForeignKey(VendorProfile, on_delete=models.CASCADE, related_name='products')
     name = models.CharField(max_length=200)
     description = models.TextField()
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other')
+    
+    # Category relation
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
+    
     price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')

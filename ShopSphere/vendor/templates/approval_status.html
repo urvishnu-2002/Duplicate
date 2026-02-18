@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f7fa;
@@ -20,7 +21,7 @@
             align-items: center;
             padding: 20px;
         }
-        
+
         .status-container {
             background: white;
             border-radius: 10px;
@@ -30,36 +31,36 @@
             padding: 40px;
             text-align: center;
         }
-        
+
         .status-icon {
             font-size: 60px;
             margin-bottom: 20px;
         }
-        
+
         .status-pending .status-icon {
             color: #f59e0b;
         }
-        
+
         .status-approved .status-icon {
             color: #10b981;
         }
-        
+
         .status-rejected .status-icon {
             color: #ef4444;
         }
-        
+
         h1 {
             color: #333;
             margin-bottom: 10px;
             font-size: 24px;
         }
-        
+
         .status-message {
             color: #666;
             margin-bottom: 20px;
             line-height: 1.6;
         }
-        
+
         .shop-info {
             background: #f9fafb;
             border-radius: 8px;
@@ -67,12 +68,12 @@
             margin: 20px 0;
             text-align: left;
         }
-        
+
         .shop-info h3 {
             color: #333;
             margin-bottom: 10px;
         }
-        
+
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -80,20 +81,20 @@
             border-bottom: 1px solid #e5e7eb;
             font-size: 14px;
         }
-        
+
         .info-row:last-child {
             border-bottom: none;
         }
-        
+
         .info-label {
             color: #666;
             font-weight: 500;
         }
-        
+
         .info-value {
             color: #333;
         }
-        
+
         .rejection-reason {
             background: #fee2e2;
             color: #991b1b;
@@ -102,7 +103,7 @@
             margin: 20px 0;
             border-left: 4px solid #ef4444;
         }
-        
+
         .action-btn {
             display: inline-block;
             margin-top: 20px;
@@ -114,13 +115,14 @@
             font-weight: 600;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        
+
         .action-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
     </style>
 </head>
+
 <body>
     <div class="status-container">
         {% if status == 'pending' %}
@@ -157,7 +159,7 @@
             </p>
         </div>
         {% endif %}
-        
+
         <div class="shop-info">
             <h3>Shop Details</h3>
             <div class="info-row">
@@ -173,10 +175,12 @@
                 <span class="info-value">{{ vendor.created_at|date:"M d, Y" }}</span>
             </div>
         </div>
-        
-        <a href="{% url 'logout' %}" style="margin-top: 20px; display: inline-block; color: #667eea; text-decoration: none; font-size: 14px;">
+
+        <a href="{% url 'logout' %}"
+            style="margin-top: 20px; display: inline-block; color: #667eea; text-decoration: none; font-size: 14px;">
             ← Back
         </a>
     </div>
 </body>
+
 </html>

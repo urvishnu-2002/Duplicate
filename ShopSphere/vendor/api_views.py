@@ -6,10 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
-<<<<<<< HEAD
 from rest_framework_simplejwt.tokens import RefreshToken
-=======
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
 from .models import VendorProfile, Product, ProductImage
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, LoginSerializer,
@@ -49,16 +46,12 @@ class LoginView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-<<<<<<< HEAD
         # Try authentication with the provided identifier as email (since it's the USERNAME_FIELD)
-=======
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
         user = authenticate(
             username=serializer.validated_data['username'],
             password=serializer.validated_data['password']
         )
         
-<<<<<<< HEAD
         # If that fails, try to find a user with that username and use their email to authenticate
         if not user:
             try:
@@ -70,32 +63,23 @@ class LoginView(generics.GenericAPIView):
             except (User.DoesNotExist, User.MultipleObjectsReturned):
                 pass
         
-=======
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
         if user is None:
             return Response({
                 'error': 'Invalid username or password'
             }, status=status.HTTP_401_UNAUTHORIZED)
         
-<<<<<<< HEAD
         # Get or create token (Legacy Token)
         token, created = Token.objects.get_or_create(user=user)
         
         # JWT Tokens for React
         refresh = RefreshToken.for_user(user)
         
-=======
-        # Get or create token
-        token, created = Token.objects.get_or_create(user=user)
-        
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
         # Check if vendor profile exists
         vendor = VendorProfile.objects.filter(user=user).first()
         
         return Response({
             'message': 'Login successful',
             'token': token.key,
-<<<<<<< HEAD
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': {
@@ -103,12 +87,6 @@ class LoginView(generics.GenericAPIView):
                 'username': user.username,
                 'email': user.email,
                 'role': user.role
-=======
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
             },
             'vendor': {
                 'id': vendor.id,
@@ -158,12 +136,9 @@ class VendorDetailsView(generics.GenericAPIView):
             })
         
         # Create vendor profile from form data
-<<<<<<< HEAD
         id_proof_file = request.FILES.get('id_proof_file')
         pan_card_file = request.FILES.get('pan_card_file')
 
-=======
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
         VendorProfile.objects.create(
             user=user,
             shop_name=request.POST.get('shop_name'),
@@ -172,7 +147,6 @@ class VendorDetailsView(generics.GenericAPIView):
             business_type=request.POST.get('business_type'),
             id_type=request.POST.get('id_type'),
             id_number=request.POST.get('id_number'),
-<<<<<<< HEAD
             
             id_proof_data=id_proof_file.read() if id_proof_file else None,
             id_proof_name=id_proof_file.name if id_proof_file else None,
@@ -182,9 +156,6 @@ class VendorDetailsView(generics.GenericAPIView):
             pan_card_name=pan_card_file.name if pan_card_file else None,
             pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
 
-=======
-            id_proof_file=request.FILES.get('id_proof_file'),
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
             approval_status='pending'
         )
         
@@ -286,13 +257,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         for image in images:
             ProductImage.objects.create(
                 product=product,
-<<<<<<< HEAD
                 image_data=image.read(),
                 image_name=image.name,
                 image_mimetype=image.content_type
-=======
-                image=image
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
             )
 
         return Response(
@@ -351,13 +318,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             for image in images:
                 ProductImage.objects.create(
                     product=product,
-<<<<<<< HEAD
                     image_data=image.read(),
                     image_name=image.name,
                     image_mimetype=image.content_type
-=======
-                    image=image
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
                 )
 
         return Response(ProductSerializer(product).data)

@@ -5,6 +5,7 @@ from .api_views import (
     RegisterView, LoginView, VendorDetailsView, VendorDashboardView,
     VendorProfileDetailView, ProductViewSet, ApprovalStatusView, UserProfileView
 )
+from .views import serve_product_image, serve_vendor_document
 
 router = DefaultRouter()
 router.register(r'products', ProductViewSet, basename='product')

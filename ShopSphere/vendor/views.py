@@ -12,12 +12,13 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import VendorProfile, Product, ProductImage
+from .models import VendorProfile, Product, ProductImage, Category
 from user.models import Order, OrderItem
 from django.db.models import Sum
 from django.db.models.functions import TruncDate
 from django.db import transaction
 from django.utils import timezone
+from django.utils.text import slugify
 import json
 from decimal import Decimal
 
@@ -165,12 +166,14 @@ def register_view(request):
     }
 
     try:
+        print(f"DEBUG: Attempting to send OTP to {email}")
         send_mail(
             subject="Your Vendor OTP",
             message=f"Your OTP for registration is: {otp}\n\nDo not share this OTP with anyone.",
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=[email],
         )
+        print(f"DEBUG: OTP sent successfully to {email}")
     except Exception as e:
         if is_json: return Response({'error': f'Error sending OTP: {str(e)}'}, status=500)
         return render(request, 'register.html', {'error': f'Error sending OTP: {str(e)}'})
@@ -193,14 +196,28 @@ def verify_otp_view(request):
 
         if str(reg_data['otp']) == entered_otp:
             # Create user
-            user = User.objects.create_user(
-                username=reg_data['username'],
-                email=reg_data['email'],
-                password=reg_data['password']
+            try:
+                # Check if user already exists to prevent IntegrityError on double submission
+                if User.objects.filter(email=reg_data['email']).exists():
+                   user = User.objects.get(email=reg_data['email'])
+                else:
+                    user = User.objects.create_user(
+                        username=reg_data['username'],
+                        email=reg_data['email'],
+                        password=reg_data['password']
+                    )
+            except Exception as e:
+                 # verify if user was created
+                 if User.objects.filter(email=reg_data['email']).exists():
+                     user = User.objects.get(email=reg_data['email'])
+                 else:
+                     return render(request, 'verify_otp.html', {'error': f'Error creating user: {str(e)}'})
 
-            )
             request.session['vendor_user_id'] = user.id
-            del request.session['reg_data']
+            # Clean up session data only if we successfully got/created a user
+            if 'reg_data' in request.session:
+                del request.session['reg_data']
+
             # if request.accessed_from_mobile:
             #     return JsonResponse({'success': True, 'message': 'OTP verified. Please complete your vendor details.'})
 
@@ -234,7 +251,6 @@ def vendor_details_view(request):
             business_type=request.POST.get('business_type'),
             id_type=request.POST.get('id_type'),
             id_number=request.POST.get('id_number'),
-<<<<<<< HEAD
             
             id_proof_data=id_proof_file.read() if id_proof_file else None,
             id_proof_name=id_proof_file.name if id_proof_file else None,
@@ -244,9 +260,6 @@ def vendor_details_view(request):
             pan_card_name=pan_card_file.name if pan_card_file else None,
             pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
 
-=======
-            id_proof_file=request.FILES.get('id_proof_file'),
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
             approval_status='pending'  # Status defaults to pending
         )
         if 'vendor_user_id' in request.session:
@@ -325,7 +338,7 @@ def vendor_home_view(request):
     # Calculate sales and earnings
     vendor_order_items = OrderItem.objects.filter(product_name__in=product_names)
     
-    total_sales = vendor_order_items.aggregate(total=Sum('price'))['total'] or Decimal('0.00')
+    total_sales = vendor_order_items.aggregate(total=Sum('subtotal'))['total'] or Decimal('0.00')
     
     # Commission (Assume 5% for now)
     commission_rate = Decimal('0.05')
@@ -335,10 +348,10 @@ def vendor_home_view(request):
     # Sales data for graph (last 7 days)
     seven_days_ago = timezone.now() - timezone.timedelta(days=7)
     sales_by_day = (
-        vendor_order_items.filter(order__order_date__gte=seven_days_ago)
-        .annotate(date=TruncDate('order__order_date'))
+        vendor_order_items.filter(order__created_at__gte=seven_days_ago)
+        .annotate(date=TruncDate('order__created_at'))
         .values('date')
-        .annotate(daily_total=Sum('price'))
+        .annotate(daily_total=Sum('subtotal'))
         .order_by('date')
     )
 
@@ -366,7 +379,8 @@ def vendor_home_view(request):
         'total_earnings': float(total_earnings),
         'graph_labels': json.dumps(labels),
         'graph_data': json.dumps(dataPoints),
-        'categories': Product.CATEGORY_CHOICES,
+        # 'categories': Product.CATEGORY_CHOICES, # Old
+        'categories': Category.objects.all(), # New
     }
 
     return render(request, 'vendor_dashboard.html', context)
@@ -414,9 +428,31 @@ def add_product_view(request):
         return redirect('approval_status')
 
     if request.method == "POST":
-        category = request.POST.get('category')
-        if category == 'other':
-            category = request.POST.get('custom_category', 'other')
+        category_id = request.POST.get('category')
+        custom_category_name = request.POST.get('custom_category')
+        
+        category = None
+        
+        # Handle custom category or selection
+        if category_id:
+            try:
+                category = Category.objects.get(id=category_id)
+                # Check if it was "Other" and custom name provided
+                if category.slug == 'other' and custom_category_name:
+                    # Create new category
+                    slug = slugify(custom_category_name)
+                    category, created = Category.objects.get_or_create(
+                        slug=slug,
+                        defaults={'name': custom_category_name}
+                    )
+            except Category.DoesNotExist:
+                # Fallback to 'other' or None
+                pass
+        
+        # If no category resolved, try to get "other"
+        if not category:
+             category = Category.objects.filter(slug='other').first()
+
 
         # 🔥 Get multiple images
         images = request.FILES.getlist('images')
@@ -425,7 +461,7 @@ def add_product_view(request):
         if len(images) < 4:
             return render(request, 'add_product.html', {
                 'vendor': vendor,
-                'categories': Product.CATEGORY_CHOICES,
+                'categories': Category.objects.all(),
                 'error': 'Minimum 4 images required.'
             })
 
@@ -434,7 +470,7 @@ def add_product_view(request):
             vendor=vendor,
             name=request.POST.get('name'),
             description=request.POST.get('description'),
-            category=category,
+            category=category, # Assign Category object
             price=request.POST.get('price'),
             quantity=request.POST.get('quantity'),
             status='active'
@@ -453,7 +489,7 @@ def add_product_view(request):
 
     return render(request, 'add_product.html', {
         'vendor': vendor,
-        'categories': Product.CATEGORY_CHOICES
+        'categories': Category.objects.all()
     })
 
 
@@ -478,11 +514,23 @@ def edit_product_view(request, product_id):
         product.name = request.POST.get('name', product.name)
         product.description = request.POST.get('description', product.description)
 
-        category = request.POST.get('category')
-        if category == 'other':
-            category = request.POST.get('custom_category', product.category)
+        category_id = request.POST.get('category')
+        custom_category_name = request.POST.get('custom_category')
+        
+        if category_id:
+            try:
+                category = Category.objects.get(id=category_id)
+                if category.slug == 'other' and custom_category_name:
+                     slug = slugify(custom_category_name)
+                     category, _ = Category.objects.get_or_create(
+                        slug=slug,
+                        defaults={'name': custom_category_name}
+                     )
+                product.category = category
+            except Category.DoesNotExist:
+                pass
 
-        product.category = category
+
         product.price = request.POST.get('price', product.price)
         product.quantity = request.POST.get('quantity', product.quantity)
         product.save()
@@ -495,7 +543,7 @@ def edit_product_view(request, product_id):
                 return render(request, 'edit_product.html', {
                     'vendor': vendor,
                     'product': product,
-                    'categories': Product.CATEGORY_CHOICES,
+                    'categories': Category.objects.all(),
                     'error': 'Minimum 4 images required.'
                 })
 
@@ -516,7 +564,7 @@ def edit_product_view(request, product_id):
     return render(request, 'edit_product.html', {
         'vendor': vendor,
         'product': product,
-        'categories': Product.CATEGORY_CHOICES
+        'categories': Category.objects.all()
     })
 
 

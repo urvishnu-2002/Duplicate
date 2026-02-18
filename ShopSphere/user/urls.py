@@ -8,17 +8,10 @@ urlpatterns = [
     path('logout', views.logout_api, name='logout'),
 
     # Shop / Product
-<<<<<<< HEAD
     path('', views.home_api, name='home'),
     path('userProducts', views.home_api, name='home'),
     
     # Cart 
-=======
-   
-    path('', views.get_product, name='user_products'),
-
-    # Cart
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
     path('cart', views.cart_view, name='cart'),
     path('add_to_cart/<int:product_id>', views.add_to_cart, name='add_to_cart'),
     

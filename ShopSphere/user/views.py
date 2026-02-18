@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from decimal import Decimal
 
-from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address, Review
+from .models import AuthUser, Cart, CartItem, Order, OrderItem,Address, Review
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer, AddressSerializer
 from .forms import AddressForm
 import uuid
@@ -72,14 +72,7 @@ def login_api(request):
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
-<<<<<<< HEAD
 # @permission_classes([IsAuthenticated])
-=======
-
-
-#permission_classes([IsAuthenticated])
-
->>>>>>> bc5c9a9c70879a27dcda6caaba4b7b1606a4b5f9
 def home_api(request):
     products = Product.objects.all()
     

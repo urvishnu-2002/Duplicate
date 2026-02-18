@@ -15,6 +15,28 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = AuthUser.objects.create_user(**validated_data)
         return user
 
+class AddressSerializer(serializers.ModelSerializer):
+    address = serializers.CharField(required=False)
+
+    class Meta:
+        model = Address
+        exclude = ['user']
+        extra_kwargs = {
+            'address_line1': {'required': False, 'write_only': True}
+        }
+
+    def validate(self, attrs):
+        # Map frontend 'address' to model 'address_line1'
+        if 'address' in attrs:
+            attrs['address_line1'] = attrs.pop('address')
+        return attrs
+
+    def to_representation(self, instance):
+        # Map model 'address_line1' back to frontend 'address'
+        data = super().to_representation(instance)
+        data['address'] = instance.address_line1
+        return data
+
 from vendor.models import Product as VendorProduct, ProductImage
 
 class ProductImageSerializer(serializers.ModelSerializer):
