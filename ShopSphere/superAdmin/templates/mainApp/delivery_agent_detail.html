@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Agent Details - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .detail-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header-bar {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-bar h1 {
+            font-size: 24px;
+        }
+        
+        .back-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .info-row {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 5px;
+        }
+        
+        .info-label {
+            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .status-pending {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .status-approved {
+            background: #28a745;
+        }
+        
+        .status-rejected {
+            background: #dc3545;
+        }
+        
+        .status-blocked {
+            background: #6c757d;
+        }
+        
+        .action-buttons {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+        }
+        
+        .logs-section {
+            margin-top: 30px;
+        }
+        
+        .log-item {
+            padding: 12px;
+            border-left: 3px solid #667eea;
+            background: #f9fafb;
+            margin-bottom: 10px;
+            border-radius: 3px;
+        }
+        
+        .log-timestamp {
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .log-action {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .log-reason {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .empty-message {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="detail-container">
+        <div class="header-bar">
+            <h1 id="agentName">🚚 Delivery Agent Details</h1>
+            <a href="/superAdmin/delivery-agents/" class="back-link">← Back to List</a>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">Personal Information</h2>
+                <div class="info-grid">
+                    <div class="info-row">
+                        <div class="info-label">Full Name</div>
+                        <div class="info-value" id="agentUsername">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Email Address</div>
+                        <div class="info-value" id="agentEmail">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Mobile Number</div>
+                        <div class="info-value" id="agentMobile">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Status</div>
+                        <div class="info-value" id="agentStatus">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Business Information</h2>
+                <div class="info-grid">
+                    <div class="info-row">
+                        <div class="info-label">Company Name</div>
+                        <div class="info-value" id="agentCompany">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Vehicle Type</div>
+                        <div class="info-value" id="agentVehicle">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">License Number</div>
+                        <div class="info-value" id="agentLicense">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Account Created</div>
+                        <div class="info-value" id="agentCreated">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">Account Status</h2>
+                <div class="info-grid">
+                    <div class="info-row">
+                        <div class="info-label">Approval Status</div>
+                        <div class="info-value" id="approvalStatus">-</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Blocked Status</div>
+                        <div class="info-value" id="blockedStatus">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section" id="rejectionReasonSection" style="display: none;">
+                <h2 class="section-title">Rejection Reason</h2>
+                <div class="info-row">
+                    <div class="info-value" id="rejectionReason" style="color: #dc3545;">-</div>
+                </div>
+            </div>
+            
+            <div class="section" id="blockedReasonSection" style="display: none;">
+                <h2 class="section-title">Blocked Reason</h2>
+                <div class="info-row">
+                    <div class="info-value" id="blockedReason" style="color: #dc3545;">-</div>
+                </div>
+            </div>
+            
+            <div class="logs-section">
+                <h2 class="section-title">Approval History</h2>
+                <div id="logsContainer">
+                    <div class="empty-message">No history records yet</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons" id="actionButtons">
+                <!-- Action buttons will be added here based on status -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const agentId = new URLSearchParams(window.location.search).get('id') || 
+                       window.location.pathname.split('/').filter(Boolean).pop();
+        
+        async function loadAgentDetails() {
+            try {
+                const response = await fetch(`/superAdmin/api/delivery-agents/${agentId}/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const agent = await response.json();
+                
+                // Populate basic info
+                document.getElementById('agentName').textContent = `🚚 ${agent.user_username}`;
+                document.getElementById('agentUsername').textContent = agent.user_username || '-';
+                document.getElementById('agentEmail').textContent = agent.user_email || '-';
+                document.getElementById('agentMobile').textContent = agent.mobile || '-';
+                document.getElementById('agentCompany').textContent = agent.company_name || '-';
+                document.getElementById('agentVehicle').textContent = agent.vehicle_type || '-';
+                document.getElementById('agentLicense').textContent = agent.driving_license_number || '-';
+                document.getElementById('agentCreated').textContent = new Date(agent.created_at).toLocaleDateString() || '-';
+                
+                // Approval Status
+                const approvalBadge = getStatusBadge(agent.approval_status_display);
+                document.getElementById('approvalStatus').innerHTML = approvalBadge;
+                document.getElementById('agentStatus').innerHTML = approvalBadge;
+                
+                // Blocked Status
+                const blockedStatus = agent.is_blocked ? 
+                    '<span class="status-badge status-blocked">Blocked</span>' :
+                    '<span class="status-badge" style="background: #28a745;">Active</span>';
+                document.getElementById('blockedStatus').innerHTML = blockedStatus;
+                
+                // Show rejection reason if rejected
+                if (agent.approval_status === 'rejected' && agent.rejection_reason) {
+                    document.getElementById('rejectionReasonSection').style.display = 'block';
+                    document.getElementById('rejectionReason').textContent = agent.rejection_reason;
+                }
+                
+                // Show blocked reason if blocked
+                if (agent.is_blocked && agent.blocked_reason) {
+                    document.getElementById('blockedReasonSection').style.display = 'block';
+                    document.getElementById('blockedReason').textContent = agent.blocked_reason;
+                }
+                
+                // Load approval logs
+                loadApprovalLogs(agent.approval_logs);
+                
+                // Generate action buttons
+                generateActionButtons(agent);
+            } catch (error) {
+                console.error('Error loading agent details:', error);
+            }
+        }
+        
+        function getStatusBadge(status) {
+            const statusMap = {
+                'Pending': 'status-pending',
+                'Approved': 'status-approved',
+                'Rejected': 'status-rejected'
+            };
+            const className = statusMap[status] || 'status-pending';
+            return `<span class="status-badge ${className}">${status}</span>`;
+        }
+        
+        function loadApprovalLogs(logs) {
+            const container = document.getElementById('logsContainer');
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="empty-message">No history records yet</div>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => `
+                <div class="log-item">
+                    <div class="log-timestamp">${new Date(log.timestamp).toLocaleString()}</div>
+                    <div class="log-action">Action: <strong>${log.action_display}</strong></div>
+                    ${log.reason ? `<div class="log-reason">Reason: ${log.reason}</div>` : ''}
+                    <div class="log-reason">By: ${log.admin_user_name || 'System'}</div>
+                </div>
+            `).join('');
+        }
+        
+        function generateActionButtons(agent) {
+            const container = document.getElementById('actionButtons');
+            const buttons = [];
+            
+            if (agent.approval_status === 'pending') {
+                buttons.push(`<a href="#" class="btn btn-success" onclick="approveAgent(${agent.id})">✓ Approve</a>`);
+                buttons.push(`<a href="#" class="btn btn-danger" onclick="rejectAgent(${agent.id})">✗ Reject</a>`);
+            } else if (agent.approval_status === 'approved') {
+                if (agent.is_blocked) {
+                    buttons.push(`<a href="#" class="btn btn-primary" onclick="unblockAgent(${agent.id})">🔓 Unblock</a>`);
+                } else {
+                    buttons.push(`<a href="#" class="btn btn-warning" onclick="blockAgent(${agent.id})">🔒 Block</a>`);
+                }
+            }
+            
+            buttons.push(`<a href="/superAdmin/delivery-agents/" class="btn btn-primary">Back to List</a>`);
+            container.innerHTML = buttons.join('');
+        }
+        
+        function approveAgent(id) {
+            if (confirm('Are you sure you want to approve this delivery agent?')) {
+                openModal('approveModal', id);
+            }
+        }
+        
+        function rejectAgent(id) {
+            if (confirm('Please provide a reason for rejection')) {
+                openModal('rejectModal', id);
+            }
+        }
+        
+        function blockAgent(id) {
+            if (confirm('Are you sure you want to block this agent?')) {
+                openModal('blockModal', id);
+            }
+        }
+        
+        function unblockAgent(id) {
+            if (confirm('Are you sure you want to unblock this agent?')) {
+                openModal('unblockModal', id);
+            }
+        }
+        
+        function openModal(modalName, agentId) {
+            // This can trigger a modal or form submission
+            alert(`Action triggered: ${modalName} for agent ${agentId}`);
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadAgentDetails);
+    </script>
+</body>
+</html>

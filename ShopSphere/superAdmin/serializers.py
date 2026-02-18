@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from vendor.models import VendorProfile, Product
-from .models import VendorApprovalLog, ProductApprovalLog
+from deliveryAgent.models import DeliveryProfile
+from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
 
 class VendorApprovalLogSerializer(serializers.ModelSerializer):
     admin_user_name = serializers.CharField(source='admin_user.username', read_only=True)
@@ -76,6 +77,57 @@ class AdminProductListSerializer(serializers.ModelSerializer):
             'id', 'name', 'vendor', 'vendor_name', 'price', 'quantity',
             'is_blocked', 'created_at'
         ]
+
+class AdminDeliveryAgentListSerializer(serializers.ModelSerializer):
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
+    
+    class Meta:
+        model = DeliveryProfile
+        fields = [
+            'id', 'user_email', 'user_username', 'vehicle_type', 'approval_status', 'approval_status_display',
+            'is_blocked', 'created_at'
+        ]
+
+class DeliveryAgentApprovalLogSerializer(serializers.ModelSerializer):
+    admin_user_name = serializers.CharField(source='admin_user.username', read_only=True)
+    action_display = serializers.CharField(source='get_action_display', read_only=True)
+    
+    class Meta:
+        model = DeliveryAgentApprovalLog
+        fields = [
+            'id', 'delivery_agent', 'admin_user', 'admin_user_name', 'action',
+            'action_display', 'reason', 'timestamp'
+        ]
+        read_only_fields = ['id', 'admin_user', 'timestamp']
+
+class AdminDeliveryAgentDetailSerializer(serializers.ModelSerializer):
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
+    approval_logs = DeliveryAgentApprovalLogSerializer(source='approval_logs.all', many=True, read_only=True)
+    
+    class Meta:
+        model = DeliveryProfile
+        fields = [
+            'id', 'user_username', 'user_email', 'vehicle_type', 'vehicle_number', 'driving_license_number',
+            'address', 'approval_status', 'approval_status_display',
+            'is_blocked', 'blocked_reason', 'created_at', 'approval_logs'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+class ApproveDeliveryAgentSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True)
+
+class RejectDeliveryAgentSerializer(serializers.Serializer):
+    reason = serializers.CharField()
+
+class BlockDeliveryAgentSerializer(serializers.Serializer):
+    reason = serializers.CharField()
+
+class UnblockDeliveryAgentSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True)
 
 class ApproveVendorSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True)

@@ -167,7 +167,7 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Tracking
-    delivery_agent = models.ForeignKey('deliveryAgent.Agent', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    delivery_agent = models.ForeignKey('deliveryAgent.DeliveryProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     tracked_location = models.CharField(max_length=255, blank=True)
     
     # Timestamps

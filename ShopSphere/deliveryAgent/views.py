@@ -1,144 +1,253 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login
-from django.contrib.auth.forms import AuthenticationForm
-from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
-from .forms import AgentRegistrationForm
-from .models import Agent
+from django.contrib import messages
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.db import transaction
+from django.conf import settings
+from django.core.mail import send_mail
+import random
 
-# ===== Dummy Agents =====
-DUMMY_AGENTS = [
-    {'id': 1, 'username': 'agent_john', 'email': 'john@example.com'},
-    {'id': 2, 'username': 'agent_sara', 'email': 'sara@example.com'},
-    {'id': 3, 'username': 'agent_mike', 'email': 'mike@example.com'},
-    {'id': 4, 'username': 'agent_lisa', 'email': 'lisa@example.com'},
-    {'id': 5, 'username': 'agent_tom', 'email': 'tom@example.com'},
-]
+from .models import DeliveryProfile, Order
 
-# ===== Dummy Orders =====
-DUMMY_ORDERS = [
-    {'id': 1, 'order_id': 'ORD-001', 'customer_name': 'John Doe', 'delivery_address': '123 Main Street, New York, NY 10001', 'earning': 10.00, 'status': 'AVAILABLE'},
-    {'id': 2, 'order_id': 'ORD-002', 'customer_name': 'Jane Smith', 'delivery_address': '456 Oak Avenue, Brooklyn, NY 11201', 'earning': 12.50, 'status': 'AVAILABLE'},
-    {'id': 3, 'order_id': 'ORD-003', 'customer_name': 'Michael Johnson', 'delivery_address': '789 Pine Road, Queens, NY 11375', 'earning': 8.00, 'status': 'AVAILABLE'},
-    {'id': 4, 'order_id': 'ORD-004', 'customer_name': 'Alice Brown', 'delivery_address': '321 Elm Street, Bronx, NY 10453', 'earning': 15.00, 'status': 'DELIVERED'},
-    {'id': 5, 'order_id': 'ORD-005', 'customer_name': 'Charlie Davis', 'delivery_address': '654 Maple Avenue, Brooklyn, NY 11215', 'earning': 9.50, 'status': 'DELIVERED'},
-    {'id': 6, 'order_id': 'ORD-006', 'customer_name': 'Diana Evans', 'delivery_address': '888 Cedar Court, Staten Island, NY 10301', 'earning': 11.00, 'status': 'AVAILABLE'},
-    {'id': 7, 'order_id': 'ORD-007', 'customer_name': 'Brian Lee', 'delivery_address': '111 Willow Lane, Manhattan, NY 10022', 'earning': 14.00, 'status': 'AVAILABLE'},
-    {'id': 8, 'order_id': 'ORD-008', 'customer_name': 'Sara Wilson', 'delivery_address': '222 Birch Street, Queens, NY 11373', 'earning': 7.50, 'status': 'AVAILABLE'},
-    {'id': 9, 'order_id': 'ORD-009', 'customer_name': 'Tom Harris', 'delivery_address': '333 Aspen Ave, Bronx, NY 10456', 'earning': 13.00, 'status': 'AVAILABLE'},
-    {'id': 10, 'order_id': 'ORD-010', 'customer_name': 'Olivia Martin', 'delivery_address': '444 Oak Lane, Manhattan, NY 10011', 'earning': 16.00, 'status': 'AVAILABLE'},
-]
+User = get_user_model()
 
-# ===== Agent Portal View =====
+# ============================================================================
+# AUTHENTICATION VIEWS - DELIVERY PARTNER REGISTRATION AND LOGIN
+# ============================================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    """Delivery Partner registration - handles both traditional form and JSON API"""
+    if request.method == "GET":
+        return render(request, 'delivery_agent/register.html')
+
+    # Detect if it's a JSON request (from frontend)
+    is_json = 'application/json' in request.headers.get('Accept', '') or \
+              'application/json' in request.headers.get('Content-Type', '')
+
+    # Use request.data for DRF/JSON, or request.POST for traditional forms
+    data = request.data if is_json else request.POST
+    
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    # Validation for new users
+    if not request.user.is_authenticated:
+        if not (username and email and password):
+            if is_json:
+                return Response({'error': 'Username, email, and password are required for new users'}, status=400)
+            return render(request, 'delivery_agent/register.html', {'error': 'Required fields missing'})
+        
+        # Check if user already exists
+        if User.objects.filter(username=username).exists():
+            if is_json: return Response({'error': 'Username already exists'}, status=400)
+            return render(request, 'delivery_agent/register.html', {'error': 'Username already exists'})
+            
+        if User.objects.filter(email=email).exists():
+            if is_json: return Response({'error': 'Email already exists'}, status=400)
+            return render(request, 'delivery_agent/register.html', {'error': 'Email already exists'})
+
+    # If it's the NEW full registration flow (Atomic Registration)
+    if is_json and data.get('vehicle_number'):
+        try:
+            with transaction.atomic():
+                # Get or Create User
+                if request.user.is_authenticated:
+                    user = request.user
+                else:
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        role='delivery'
+                    )
+                    print(f"DEBUG: Created new delivery user {user.email}.")
+
+                # Check if they already have a delivery profile
+                if hasattr(user, 'delivery_profile'):
+                     return Response({'error': 'You already have a delivery profile.'}, status=400)
+                
+                # Create the delivery profile with all registration data
+                DeliveryProfile.objects.create(
+                    user=user,
+                    address=data.get('address', ''),
+                    vehicle_type=data.get('vehicle_type', 'bike'),
+                    vehicle_number=data.get('vehicle_number', ''),
+                    driving_license_number=data.get('driving_license_number', ''),
+                    bank_holder_name=data.get('bank_holder_name', ''),
+                    bank_account_number=data.get('bank_account_number', ''),
+                    bank_ifsc_code=data.get('bank_ifsc_code', ''),
+                    approval_status='pending'
+                )
+                
+                print(f"DEBUG: Delivery profile for {user.username} created.")
+                
+                # If it's an authenticated user, keep them logged in
+                # If it's a new user, log them out so they need to login to access the dashboard
+                if not request.user.is_authenticated and not is_json:
+                    # For new users, log out and redirect to login
+                    from django.contrib.auth import logout as auth_logout
+                    auth_logout(request)
+                
+                if is_json:
+                    return Response({'success': True, 'message': 'Registration submitted! Details have been sent to the Admin for approval.'}, status=201)
+                else:
+                    return redirect('delivery_login')
+        except Exception as e:
+            print(f"DEBUG: Error during delivery registration: {str(e)}")
+            return Response({'error': str(e)}, status=500)
+
+    # LEGACY / OTP FLOW
+    otp = random.randint(100000, 999999)
+    request.session['delivery_reg_data'] = {
+        'username': username,
+        'email': email,
+        'password': password,
+        'otp': otp
+    }
+
+    try:
+        send_mail(
+            subject="Your Delivery Partner OTP",
+            message=f"Your OTP for registration is: {otp}\n\nDo not share this OTP with anyone.",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[email],
+        )
+    except Exception as e:
+        if is_json: return Response({'error': f'Error sending OTP: {str(e)}'}, status=500)
+        return render(request, 'delivery_agent/register.html', {'error': f'Error sending OTP: {str(e)}'})
+
+    if is_json:
+        return Response({'success': True, 'message': 'OTP sent to email', 'otp_required': True})
+    return redirect('delivery_verify_otp')
+
+
+def verify_otp_view(request):
+    """Verify OTP and create user account"""
+    if request.method == "POST":
+        entered_otp = request.POST.get('otp')
+        reg_data = request.session.get('delivery_reg_data')
+
+        if not reg_data:
+            return render(request, 'delivery_agent/verify_otp.html', {
+                'error': 'Session expired. Please register again.'
+            })
+
+        if str(reg_data['otp']) == entered_otp:
+            # Create user
+            user = User.objects.create_user(
+                username=reg_data['username'],
+                email=reg_data['email'],
+                password=reg_data['password'],
+                role='delivery'
+            )
+            request.session['delivery_user_id'] = user.id
+            del request.session['delivery_reg_data']
+
+            return redirect('delivery_details')
+        else:
+            return render(request, 'delivery_agent/verify_otp.html', {
+                'error': 'Invalid OTP. Please try again.'
+            })
+
+    return render(request, 'delivery_agent/verify_otp.html')
+
+
+def delivery_details_view(request):
+    """Delivery Partner submits details to complete registration"""
+    user_id = request.session.get('delivery_user_id')
+    
+    if not user_id:
+        return redirect('delivery_register')
+
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == "POST":
+        DeliveryProfile.objects.create(
+            user=user,
+            address=request.POST.get('address'),
+            vehicle_type=request.POST.get('vehicle_type'),
+            vehicle_number=request.POST.get('vehicle_number'),
+            driving_license_number=request.POST.get('driving_license_number'),
+            dl_image=request.FILES.get('dl_image'),
+            bank_holder_name=request.POST.get('bank_holder_name'),
+            bank_account_number=request.POST.get('bank_account_number'),
+            bank_ifsc_code=request.POST.get('bank_ifsc_code'),
+            approval_status='pending'
+        )
+        if 'delivery_user_id' in request.session:
+            del request.session['delivery_user_id']
+        return redirect('delivery_login')
+    return render(request, 'delivery_agent/delivery_details.html')
+
+
 def agent_portal(request):
-    # If user is already logged in, redirect to dashboard
+    """Login View"""
+    # If already logged in, send them to the dashboard
     if request.user.is_authenticated:
         return redirect('delivery_dashboard')
 
-    login_form = AuthenticationForm()
-    signup_form = AgentRegistrationForm()
-    active_tab = 'signin'
-
-    style = (
-        'w-full p-5 bg-gray-50 border-2 border-gray-100 rounded-[2rem] '
-        'font-bold tracking-wide focus:border-[#5D56D1] outline-none transition-all'
-    )
-    for field in login_form.fields.values():
-        field.widget.attrs.update({'class': style})
-
     if request.method == 'POST':
-        action = request.POST.get('action')
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            return redirect('delivery_dashboard')
+        else:
+            return render(request, 'delivery_agent/delivery_login.html', {'error': 'Invalid credentials'})
 
-        if action == 'signup':
-            active_tab = 'signup'
-            signup_form = AgentRegistrationForm(request.POST)
-
-            if signup_form.is_valid():
-                user = signup_form.save()
-                login(request, user)
-                messages.success(request, "Account created! Welcome to the fleet 🚚")
-                return redirect('delivery_dashboard')
-            else:
-                messages.error(request, "Please fix the errors below.")
-
-        elif action == 'login':
-            active_tab = 'signin'
-            login_form = AuthenticationForm(request, data=request.POST)
-            for field in login_form.fields.values():
-                field.widget.attrs.update({'class': style})
-
-            if login_form.is_valid():
-                login(request, login_form.get_user())
-                return redirect('delivery_dashboard')
-            else:
-                messages.error(request, "Invalid username or password.")
-
-    return render(request, 'agent_portal.html', {
-        'login_form': login_form,
-        'signup_form': signup_form,
-        'active_tab': active_tab,
-        'dummy_agents': DUMMY_AGENTS,
-    })
+    return render(request, 'delivery_agent/delivery_login.html')
 
 
-# ===== Delivery Dashboard View =====
-@login_required
+@login_required(login_url='delivery_login')
 def delivery_dashboard(request):
-    if not isinstance(request.user, Agent):
-        return redirect('agent_portal')
+    try:
+        profile = request.user.delivery_profile
+    except DeliveryProfile.DoesNotExist:
+        return redirect('delivery_login')
+        
+    # Ensure these queries work with your Order model
+    available_orders = Order.objects.filter(status='AVAILABLE')
+    delivered_orders = Order.objects.filter(assigned_to=profile, status='DELIVERED')
+    active_orders = Order.objects.filter(assigned_to=profile, status='ON_ROUTE')
 
-    # Active orders for dashboard
-    active_order = next((o for o in DUMMY_ORDERS if o['status'] == 'AVAILABLE'), None)
+    # Calculate earnings (using shipping_cost as proxy)
+    total_earnings = sum(order.shipping_cost for order in delivered_orders)
 
-    # Recent delivered orders
-    recent_orders = [o for o in DUMMY_ORDERS if o['status'] == 'DELIVERED']
+    # Annotate orders with 'earning' for template compatibility
+    for order in available_orders:
+        order.earning = order.shipping_cost
+    
+    for order in delivered_orders:
+        order.earning = order.shipping_cost
 
-    # Dashboard stats
-    total_earnings = sum(o['earning'] for o in recent_orders)
-    completed_orders_count = len(recent_orders)
-    available_orders_count = len([o for o in DUMMY_ORDERS if o['status'] == 'AVAILABLE'])
-
-    return render(request, 'delivery_dashboard.html', {
-        'user': request.user,
-        'available_orders': [o for o in DUMMY_ORDERS if o['status'] == 'AVAILABLE'],
-        'recent_orders': recent_orders,
+    context = {
+        'profile': profile,
+        'available_orders': available_orders,
+        'delivered_orders': delivered_orders,
+        'active_orders_count': active_orders.count(),
         'total_earnings': total_earnings,
-        'completed_orders_count': completed_orders_count,
-        'available_orders_count': available_orders_count,
-    })
-
-
-# ===== Accept Order (Simulated for Dummy Data) =====
-@login_required
-def accept_order_sim(request, order_id):
-    order = next((o for o in DUMMY_ORDERS if o['id'] == int(order_id)), None)
-
-    if order:
-        if order['status'] == 'AVAILABLE':
-            order['status'] = 'ON_ROUTE'
-            messages.success(request, "Thanks for accepting the order, please deliver it with care.")
-        else:
-            messages.warning(request, "This order is already accepted.")
-    else:
-        messages.error(request, "Order not found.")
-
-    return redirect('delivery_dashboard')
-
-# ===== Accept Order (Simulated for Dummy Data) =====
-@login_required
+    }
+    return render(request, 'delivery_agent/delivery_dashboard.html', context)
+    
+@login_required(login_url='delivery_login')
 def accept_order(request, order_id):
-    if request.method == 'POST':  # Ensure POST request
-        order = next((o for o in DUMMY_ORDERS if o['id'] == int(order_id)), None)
+    order = get_object_or_404(Order, id=order_id)
 
-        if order:
-            if order['status'] == 'AVAILABLE':
-                order['status'] = 'ON_ROUTE'
-                messages.success(request, f"Order {order['order_id']} accepted! Please deliver it with care.")
-            else:
-                messages.warning(request, f"Order {order['order_id']} is already accepted or delivered.")
-        else:
-            messages.error(request, "Order not found.")
+    if order.status == 'AVAILABLE':
+        order.status = 'ON_ROUTE'
+        order.assigned_to = request.user
+        order.save()
+        messages.success(request, f"Order {order.order_id} accepted!")
     else:
-        messages.error(request, "Invalid request method.")
+        messages.error(request, "This order is no longer available.")
 
     return redirect('delivery_dashboard')

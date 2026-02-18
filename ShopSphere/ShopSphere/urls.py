@@ -10,13 +10,20 @@ urlpatterns = [
     # Django Admin
     path('admin/', admin.site.urls),
     
-    # API endpoints for each app
+    # User/Customer URLs (Home, Product browsing, Cart, Orders)
+    path('', include('user.urls')),
+    
+    # Vendor URLs (Vendor registration, products, dashboard)
     path('vendor/', include('vendor.urls')),
+    
+    # Delivery Agent URLs (Agent registration, portal, orders)
+    path('delivery/', include('deliveryAgent.urls')),
+    
+    # SuperAdmin URLs (Admin panel, approvals, management)
     path('superAdmin/', include('superAdmin.urls')),
-    path('deliveryAgent/', include('deliveryAgent.urls')),
 ]
 
-# Serve media files
+# Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
