@@ -1,13 +1,16 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .api_views import (
-    VendorRequestViewSet, VendorManagementViewSet, ProductManagementViewSet, DashboardView
+    VendorRequestViewSet, VendorManagementViewSet, ProductManagementViewSet,
+    DeliveryAgentRequestViewSet, DeliveryAgentManagementViewSet, DashboardView
 )
 
 router = DefaultRouter()
 router.register(r'vendor-requests', VendorRequestViewSet, basename='vendor_request')
 router.register(r'vendors', VendorManagementViewSet, basename='vendor_management')
 router.register(r'products', ProductManagementViewSet, basename='product_management')
+router.register(r'delivery-agent-requests', DeliveryAgentRequestViewSet, basename='delivery_agent_request')
+router.register(r'delivery-agents', DeliveryAgentManagementViewSet, basename='delivery_agent_management')
 
 urlpatterns = [
     # Dashboard

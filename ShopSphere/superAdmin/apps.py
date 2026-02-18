@@ -1,5 +1,4 @@
 from django.apps import AppConfig
 
-
-class SuperadminConfig(AppConfig):
+class SuperAdminConfig(AppConfig):
     name = 'superAdmin'

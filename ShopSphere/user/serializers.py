@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import AuthUser, Product, Cart, CartItem, Order, OrderItem
+from .models import (AuthUser, Cart, CartItem, Order, OrderItem, Address, 
+                     UserWallet, WalletTransaction, OrderReturn, Refund, 
+                     TwoFactorAuth, Notification, Dispute, Coupon, CouponUsage)
+from vendor.models import Product, ProductImage
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -12,11 +15,48 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = AuthUser.objects.create_user(**validated_data)
         return user
 
+<<<<<<< HEAD
 
 class ProductSerializer(serializers.ModelSerializer):
+=======
+class AddressSerializer(serializers.ModelSerializer):
+    address = serializers.CharField(required=False)
+
+>>>>>>> 0bab0cae40e73c170dbfaeee4c70bb3c608fbf2b
     class Meta:
-        model = Product
-        fields = '__all__'
+        model = Address
+        exclude = ['user']
+        extra_kwargs = {
+            'address_line1': {'required': False, 'write_only': True}
+        }
+
+    def validate(self, attrs):
+        # Map frontend 'address' to model 'address_line1'
+        if 'address' in attrs:
+            attrs['address_line1'] = attrs.pop('address')
+        return attrs
+
+    def to_representation(self, instance):
+        # Map model 'address_line1' back to frontend 'address'
+        data = super().to_representation(instance)
+        data['address'] = instance.address_line1
+        return data
+
+from vendor.models import Product as VendorProduct, ProductImage
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'uploaded_at']
+
+class ProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+    class Meta:
+        model = VendorProduct
+        fields = [
+            'id', 'name', 'description', 'category', 'price', 
+            'quantity', 'images', 'status', 'is_blocked', 'created_at'
+        ]
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -30,7 +70,12 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
+<<<<<<< HEAD
         fields = '__all__'
+=======
+        fields = ['id', 'user', 'payment_method', 'payment_status', 'total_amount', 
+                  'status', 'delivery_address', 'created_at', 'items']
+>>>>>>> 0bab0cae40e73c170dbfaeee4c70bb3c608fbf2b
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -42,7 +87,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'quantity', 'total_price']
 
     def get_total_price(self, obj):
-        return obj.total_price()
+        return obj.get_total()
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -54,4 +99,92 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'items', 'total_cart_price']
 
     def get_total_cart_price(self, obj):
+<<<<<<< HEAD
         return sum(item.total_price() for item in obj.items.all())
+=======
+        return obj.get_total()
+
+
+# ===============================================
+#          WALLET & PAYMENT SERIALIZERS
+# ===============================================
+
+class WalletTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WalletTransaction
+        fields = '__all__'
+
+
+class UserWalletSerializer(serializers.ModelSerializer):
+    transactions = WalletTransactionSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = UserWallet
+        fields = ['id', 'balance', 'total_credited', 'total_debited', 'transactions', 'created_at']
+
+
+# ===============================================
+#          RETURN & REFUND SERIALIZERS
+# ===============================================
+
+class OrderReturnSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderReturn
+        fields = '__all__'
+
+
+class RefundSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Refund
+        fields = '__all__'
+
+
+# ===============================================
+#          TWO-FACTOR AUTH SERIALIZER
+# ===============================================
+
+class TwoFactorAuthSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TwoFactorAuth
+        fields = ['is_enabled', 'method', 'otp_verified_at']
+        extra_kwargs = {'secret_key': {'write_only': True}}
+
+
+# ===============================================
+#          NOTIFICATION SERIALIZER
+# ===============================================
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'notification_type', 'title', 'message', 'is_read', 'created_at', 'read_at']
+
+
+# ===============================================
+#          DISPUTE SERIALIZER
+# ===============================================
+
+class DisputeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dispute
+        fields = '__all__'
+
+
+# ===============================================
+#          COUPON SERIALIZERS
+# ===============================================
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = ['id', 'code', 'coupon_type', 'discount_value', 'min_purchase_amount',
+                  'valid_from', 'valid_till', 'is_active']
+
+
+class CouponUsageSerializer(serializers.ModelSerializer):
+    coupon = CouponSerializer(read_only=True)
+    
+    class Meta:
+        model = CouponUsage
+        fields = '__all__'
+>>>>>>> 0bab0cae40e73c170dbfaeee4c70bb3c608fbf2b

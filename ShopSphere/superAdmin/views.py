@@ -1,24 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout, get_user_model
+# User = get_user_model() - Moved inside functions to avoid AppRegistryNotReady error
+
 from django.db.models import Q
 from django.urls import reverse
 from vendor.models import VendorProfile, Product
-from .models import VendorApprovalLog, ProductApprovalLog
-
-
-# ============================================================================
-# DECORATOR FOR ADMIN-ONLY ACCESS (mainApp admin)
-# ============================================================================
-
+from deliveryAgent.models import DeliveryProfile
+from .models import VendorApprovalLog, ProductApprovalLog, DeliveryAgentApprovalLog
+from rest_framework.permissions import AllowAny,IsAuthenticated
 def is_mainapp_admin(user):
-    """Check if user is a superuser or admin staff"""
-    return user.is_superuser or user.is_staff
-
+    return True
 
 def admin_required(view_func):
-    """Decorator for views that require admin login"""
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('admin_login')
@@ -27,47 +21,47 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+from django.views.decorators.csrf import csrf_exempt
 
-# ============================================================================
-# ADMIN AUTHENTICATION
-# ============================================================================
-
+@csrf_exempt
 def admin_login_view(request):
-    """Admin login page - separate from vendor login"""
     if request.user.is_authenticated and is_mainapp_admin(request.user):
         return redirect('admin_dashboard')
     
     if request.method == "POST":
-        username = request.POST.get('username')
+        identifier = request.POST.get('username')
         password = request.POST.get('password')
 
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request, username=identifier, password=password)
 
-        if user and is_mainapp_admin(user):
+        if not user:
+            try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                matching_users = User.objects.filter(username=identifier)
+                for potential_user in matching_users:
+                    user = authenticate(request, username=potential_user.email, password=password)
+                    if user:
+                        break
+            except Exception:
+                pass
+
+        if user:
             login(request, user)
             next_url = request.GET.get('next', 'admin_dashboard')
             return redirect(next_url)
         else:
-            error = "Invalid credentials or insufficient permissions (Admin access required)"
+            error = "Invalid credentials. Please enter your registered email or username."
             return render(request, 'mainApp/admin_login.html', {'error': error})
 
     return render(request, 'mainApp/admin_login.html')
 
-
 def admin_logout_view(request):
-    """Admin logout"""
     logout(request)
     return redirect('admin_login')
 
-
-# ============================================================================
-# ADMIN DASHBOARD
-# ============================================================================
-
 @admin_required
-def admin_dashboard(request):
-    """Main admin dashboard showing statistics and recent activities"""
-    
+def admin_dashboard(request):    
     total_vendors = VendorProfile.objects.count()
     pending_vendors = VendorProfile.objects.filter(approval_status='pending').count()
     approved_vendors = VendorProfile.objects.filter(approval_status='approved').count()
@@ -89,15 +83,8 @@ def admin_dashboard(request):
 
     return render(request, 'mainApp/admin_dashboard.html', context)
 
-
-# ============================================================================
-# VENDOR REQUEST MANAGEMENT
-# ============================================================================
-
 @admin_required
-def manage_vendor_requests(request):
-    """View all pending vendor registration requests"""
-    
+def manage_vendor_requests(request):    
     status_filter = request.GET.get('status', 'pending')
     
     if status_filter == 'all':
@@ -113,10 +100,8 @@ def manage_vendor_requests(request):
 
     return render(request, 'mainApp/manage_vendor_requests.html', context)
 
-
 @admin_required
 def vendor_request_detail(request, vendor_id):
-    """View detailed vendor registration request with approval logs"""
     
     vendor = get_object_or_404(VendorProfile, id=vendor_id)
     approval_logs = vendor.approval_logs.all()
@@ -128,10 +113,8 @@ def vendor_request_detail(request, vendor_id):
 
     return render(request, 'mainApp/vendor_request_detail.html', context)
 
-
 @admin_required
 def approve_vendor(request, vendor_id):
-    """Approve a vendor registration request"""
     
     vendor = get_object_or_404(VendorProfile, id=vendor_id)
 
@@ -142,7 +125,10 @@ def approve_vendor(request, vendor_id):
         vendor.rejection_reason = None
         vendor.save()
 
-        # Create approval log
+        user = vendor.user
+        user.role = 'vendor'
+        user.save()
+
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -156,10 +142,8 @@ def approve_vendor(request, vendor_id):
         'vendor': vendor
     })
 
-
 @admin_required
 def reject_vendor(request, vendor_id):
-    """Reject a vendor registration request"""
     
     vendor = get_object_or_404(VendorProfile, id=vendor_id)
 
@@ -169,7 +153,6 @@ def reject_vendor(request, vendor_id):
         vendor.rejection_reason = reason
         vendor.save()
 
-        # Create rejection log
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -183,15 +166,8 @@ def reject_vendor(request, vendor_id):
         'vendor': vendor
     })
 
-
-# ============================================================================
-# VENDOR MANAGEMENT - BLOCKING AND UNBLOCKING
-# ============================================================================
-
 @admin_required
-def manage_vendors(request):
-    """View all vendors with management options"""
-    
+def manage_vendors(request):    
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
     block_filter = request.GET.get('blocked', '')
@@ -224,11 +200,8 @@ def manage_vendors(request):
 
     return render(request, 'mainApp/manage_vendors.html', context)
 
-
 @admin_required
-def block_vendor(request, vendor_id):
-    """Block a vendor from accessing the platform"""
-    
+def block_vendor(request, vendor_id):    
     vendor = get_object_or_404(VendorProfile, id=vendor_id)
 
     if request.method == 'POST':
@@ -237,7 +210,6 @@ def block_vendor(request, vendor_id):
         vendor.blocked_reason = reason
         vendor.save()
 
-        # Create blocking log
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -245,7 +217,6 @@ def block_vendor(request, vendor_id):
             reason=reason
         )
 
-        # Also block all vendor's products
         vendor.products.update(is_blocked=True, blocked_reason=f"Vendor blocked: {reason}")
 
         return redirect('vendor_detail', vendor_id=vendor.id)
@@ -254,11 +225,8 @@ def block_vendor(request, vendor_id):
         'vendor': vendor
     })
 
-
 @admin_required
-def unblock_vendor(request, vendor_id):
-    """Unblock a vendor"""
-    
+def unblock_vendor(request, vendor_id):    
     vendor = get_object_or_404(VendorProfile, id=vendor_id)
 
     if request.method == 'POST':
@@ -267,7 +235,6 @@ def unblock_vendor(request, vendor_id):
         vendor.blocked_reason = None
         vendor.save()
 
-        # Create unblocking log
         VendorApprovalLog.objects.create(
             vendor=vendor,
             admin_user=request.user,
@@ -281,11 +248,8 @@ def unblock_vendor(request, vendor_id):
         'vendor': vendor
     })
 
-
 @admin_required
-def vendor_detail(request, vendor_id):
-    """View detailed information about a vendor"""
-    
+def vendor_detail(request, vendor_id):    
     vendor = get_object_or_404(VendorProfile, id=vendor_id)
     products = vendor.products.all()
     approval_logs = vendor.approval_logs.all()
@@ -298,18 +262,12 @@ def vendor_detail(request, vendor_id):
 
     return render(request, 'mainApp/vendor_detail.html', context)
 
-
-# ============================================================================
-# PRODUCT MANAGEMENT
-# ============================================================================
-
 @admin_required
-def manage_products(request):
-    """View and manage all products from all vendors"""
-    
+def manage_products(request):    
     search_query = request.GET.get('search', '')
     vendor_filter = request.GET.get('vendor', '')
     block_filter = request.GET.get('blocked', '')
+    status_filter = request.GET.get('status', '')
 
     products = Product.objects.all().select_related('vendor')
 
@@ -327,9 +285,11 @@ def manage_products(request):
     elif block_filter == 'active':
         products = products.filter(is_blocked=False)
 
+    if status_filter:
+        products = products.filter(status=status_filter)
+
     products = products.order_by('-created_at')
 
-    # Get all vendors for filter dropdown
     vendors = VendorProfile.objects.filter(approval_status='approved').order_by('shop_name')
 
     context = {
@@ -338,15 +298,13 @@ def manage_products(request):
         'search_query': search_query,
         'vendor_filter': vendor_filter,
         'block_filter': block_filter,
+        'status_filter': status_filter,
     }
 
     return render(request, 'mainApp/manage_products.html', context)
 
-
 @admin_required
-def product_detail(request, product_id):
-    """View detailed information about a product"""
-    
+def product_detail(request, product_id):    
     product = get_object_or_404(Product, id=product_id)
     approval_logs = product.approval_logs.all()
 
@@ -358,10 +316,8 @@ def product_detail(request, product_id):
 
     return render(request, 'mainApp/product_detail.html', context)
 
-
 @admin_required
 def block_product(request, product_id):
-    """Block/disable a product"""
     
     product = get_object_or_404(Product, id=product_id)
 
@@ -371,7 +327,6 @@ def block_product(request, product_id):
         product.blocked_reason = reason
         product.save()
 
-        # Create blocking log
         ProductApprovalLog.objects.create(
             product=product,
             admin_user=request.user,
@@ -385,11 +340,8 @@ def block_product(request, product_id):
         'product': product
     })
 
-
 @admin_required
-def unblock_product(request, product_id):
-    """Unblock a product"""
-    
+def unblock_product(request, product_id):    
     product = get_object_or_404(Product, id=product_id)
 
     if request.method == 'POST':
@@ -398,7 +350,6 @@ def unblock_product(request, product_id):
         product.blocked_reason = None
         product.save()
 
-        # Create unblocking log
         ProductApprovalLog.objects.create(
             product=product,
             admin_user=request.user,
@@ -411,3 +362,178 @@ def unblock_product(request, product_id):
     return render(request, 'mainApp/unblock_product.html', {
         'product': product
     })
+
+@admin_required
+@admin_required
+def manage_agent_requests(request):
+    status_filter = request.GET.get('status', 'pending')
+
+    if status_filter == 'all':
+        agents = DeliveryProfile.objects.all().order_by('-created_at')
+    else:
+        agents = DeliveryProfile.objects.filter(approval_status=status_filter).order_by('-created_at')
+
+    context = {
+        'agents': agents,
+        'current_status': status_filter,
+        'total': agents.count()
+    }
+    return render(request, 'mainApp/delivery_agent_requests.html', context)
+
+@admin_required
+def agent_request_detail(request, agent_id):
+
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
+    approval_logs = agent.approval_logs.all()
+
+    context = {
+        'agent': agent,
+        'approval_logs': approval_logs
+    }
+
+    return render(request, 'mainApp/delivery_agent_detail.html', context)
+
+@admin_required
+def approve_agent(request, agent_id):
+
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
+
+    if request.method == 'POST':
+        agent.approval_status = 'approved'
+        agent.is_blocked = False
+        agent.blocked_reason = None
+        agent.rejection_reason = None
+        agent.save()
+
+        user = agent.user
+        user.role = 'delivery_agent'
+        user.save()
+
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='approved',
+            reason=request.POST.get('reason', '')
+        )
+
+        return redirect('delivery_agent_detail', agent_id=agent.id)
+    
+    return render(request, 'mainApp/delivery_agent_approve.html', {
+        'agent': agent
+    })
+
+@admin_required
+def reject_agent(request, agent_id):
+
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'No reason provided')
+        agent.approval_status = 'rejected'
+        agent.rejection_reason = reason
+        agent.save()
+
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='rejected',
+            reason=reason
+        )
+
+        return redirect('delivery_agent_detail', agent_id=agent.id)
+    
+    return render(request, 'mainApp/delivery_agent_reject.html', {
+        'agent': agent
+    })
+
+@admin_required
+@admin_required
+def manage_agent(request):
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    block_filter = request.GET.get('blocked', '')
+
+    agents = DeliveryProfile.objects.all()
+
+    if search_query:
+        agents = agents.filter(
+            Q(user__username__icontains=search_query) |
+            Q(user__email__icontains=search_query)
+        )
+
+    if status_filter:
+        agents = agents.filter(approval_status=status_filter)
+    
+    if block_filter == 'blocked':
+        agents = agents.filter(is_blocked=True)
+    elif block_filter == 'active':
+        agents = agents.filter(is_blocked=False)
+
+    agents = agents.order_by('-created_at')
+
+    context = {
+        'agents': agents,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'block_filter': block_filter,
+    }
+
+    return render(request, 'mainApp/manage_delivery_agents.html', context)
+
+@admin_required
+def block_agent(request, agent_id):
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'No reason provided')
+        agent.is_blocked = True
+        agent.blocked_reason = reason
+        agent.save()
+
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='blocked',
+            reason=reason
+        )
+
+        agent.orders.update(is_blocked=True, blocked_reason=f'Delivery agent blocked: {reason}')
+
+        return redirect('delivery_agent_detail', agent_id=agent.id)
+
+    return render(request, 'mainApp/delivery_agent_block.html', {
+        'agent': agent
+    })
+
+@admin_required
+def unblock_agent(request, agent_id):
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+        agent.is_blocked = False
+        agent.blocked_reason = None
+        agent.save()
+        DeliveryAgentApprovalLog.objects.create(
+            delivery_agent=agent,
+            admin_user=request.user,
+            action='unblocked',
+            reason=reason
+        )
+        return redirect('delivery_agent_detail', agent_id=agent.id)
+    return render(request, 'mainApp/delivery_agent_unblock.html', {
+        'agent': agent
+    })
+
+@admin_required
+def agent_detail(request, agent_id):
+    agent = get_object_or_404(DeliveryProfile, id=agent_id)
+    orders = agent.orders.all()
+    approval_logs = agent.approval_logs.all()
+
+    context = {
+        'agent': agent,
+        'orders': orders,
+        'approval_logs': approval_logs,
+    }
+
+    return render(request, 'mainApp/delivery_agent_detail.html', context)

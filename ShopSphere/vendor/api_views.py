@@ -3,15 +3,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
-from .models import VendorProfile, Product
+from django.shortcuts import render, redirect, get_object_or_404
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import VendorProfile, Product, ProductImage
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, LoginSerializer,
     VendorProfileSerializer, VendorRegistrationSerializer,
     ProductSerializer, ProductCreateUpdateSerializer, ProductListSerializer
 )
+
+User = get_user_model()
+
 
 
 class RegisterView(generics.CreateAPIView):
@@ -42,18 +46,33 @@ class LoginView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
+        # Try authentication with the provided identifier as email (since it's the USERNAME_FIELD)
         user = authenticate(
             username=serializer.validated_data['username'],
             password=serializer.validated_data['password']
         )
+        
+        # If that fails, try to find a user with that username and use their email to authenticate
+        if not user:
+            try:
+                temp_user = User.objects.get(username=serializer.validated_data['username'])
+                user = authenticate(
+                    username=temp_user.email,
+                    password=serializer.validated_data['password']
+                )
+            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                pass
         
         if user is None:
             return Response({
                 'error': 'Invalid username or password'
             }, status=status.HTTP_401_UNAUTHORIZED)
         
-        # Get or create token
+        # Get or create token (Legacy Token)
         token, created = Token.objects.get_or_create(user=user)
+        
+        # JWT Tokens for React
+        refresh = RefreshToken.for_user(user)
         
         # Check if vendor profile exists
         vendor = VendorProfile.objects.filter(user=user).first()
@@ -61,10 +80,13 @@ class LoginView(generics.GenericAPIView):
         return Response({
             'message': 'Login successful',
             'token': token.key,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'email': user.email
+                'email': user.email,
+                'role': user.role
             },
             'vendor': {
                 'id': vendor.id,
@@ -81,22 +103,20 @@ class VendorDetailsView(generics.GenericAPIView):
     
     def get(self, request, *args, **kwargs):
         """Render HTML form for vendor details"""
-        from django.shortcuts import render, redirect
         
         # Check if user is coming from registration (has vendor_user_id in session)
         vendor_user_id = request.session.get('vendor_user_id')
         if not vendor_user_id:
             # If authenticated via API token, use that user
             if request.user.is_authenticated:
-                return render(request, 'ecommapp/vendor_details.html')
+                return render(request, 'vendor/vendor_details.html')
             else:
                 return redirect('register')
         
-        return render(request, 'ecommapp/vendor_details.html')
+        return render(request, 'vendor/vendor_details.html')
     
     def post(self, request, *args, **kwargs):
         """Process vendor details form submission"""
-        from django.shortcuts import redirect, render, get_object_or_404
         
         # Get user from session or from authenticated request
         vendor_user_id = request.session.get('vendor_user_id')
@@ -111,11 +131,14 @@ class VendorDetailsView(generics.GenericAPIView):
         vendor = VendorProfile.objects.filter(user=user).first()
         
         if vendor:
-            return render(request, 'ecommapp/vendor_details.html', {
+            return render(request, 'vendor/vendor_details.html', {
                 'error': 'Vendor profile already exists'
             })
         
         # Create vendor profile from form data
+        id_proof_file = request.FILES.get('id_proof_file')
+        pan_card_file = request.FILES.get('pan_card_file')
+
         VendorProfile.objects.create(
             user=user,
             shop_name=request.POST.get('shop_name'),
@@ -124,7 +147,15 @@ class VendorDetailsView(generics.GenericAPIView):
             business_type=request.POST.get('business_type'),
             id_type=request.POST.get('id_type'),
             id_number=request.POST.get('id_number'),
-            id_proof_file=request.FILES.get('id_proof_file'),
+            
+            id_proof_data=id_proof_file.read() if id_proof_file else None,
+            id_proof_name=id_proof_file.name if id_proof_file else None,
+            id_proof_mimetype=id_proof_file.content_type if id_proof_file else None,
+            
+            pan_card_data=pan_card_file.read() if pan_card_file else None,
+            pan_card_name=pan_card_file.name if pan_card_file else None,
+            pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
+
             approval_status='pending'
         )
         
@@ -207,19 +238,35 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': 'Vendor profile not found'
             }, status=status.HTTP_404_NOT_FOUND)
-        
+
+        images = request.FILES.getlist('images')
+
+        if len(images) < 4:
+            return Response({
+                'error': 'Minimum 4 images are required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         product = Product.objects.create(
             vendor=vendor,
             **serializer.validated_data
         )
-        
+
+        for image in images:
+            ProductImage.objects.create(
+                product=product,
+                image_data=image.read(),
+                image_name=image.name,
+                image_mimetype=image.content_type
+            )
+
         return Response(
             ProductSerializer(product).data,
             status=status.HTTP_201_CREATED
         )
+
     
     def list(self, request, *args, **kwargs):
         try:
@@ -245,6 +292,39 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+    def update(self, request, *args, **kwargs):
+        product = self.get_object()
+
+        if product.vendor.user != request.user:
+            return Response({
+                'error': 'You do not have permission to update this product'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        images = request.FILES.getlist('images')
+
+        serializer = self.get_serializer(product, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # If images are sent → replace old ones
+        if images:
+            if len(images) < 4:
+                return Response({
+                    'error': 'Minimum 4 images are required.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            product.images.all().delete()
+
+            for image in images:
+                ProductImage.objects.create(
+                    product=product,
+                    image_data=image.read(),
+                    image_name=image.name,
+                    image_mimetype=image.content_type
+                )
+
+        return Response(ProductSerializer(product).data)
+
     
     def destroy(self, request, *args, **kwargs):
         product = self.get_object()

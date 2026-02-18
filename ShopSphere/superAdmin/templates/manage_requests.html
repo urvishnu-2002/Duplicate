@@ -1,0 +1,24 @@
+<h2>Manage Vendor Requests</h2>
+<table border="1">
+    <tr>
+        <th>Vendor</th>
+        <th>Shop Name</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+    {% for vendor in vendors %}
+    <tr>
+        <td>{{ vendor.user.username }}</td>
+        <td>{{ vendor.shop_name }}</td>
+        <td>{{ vendor.approval_status }}</td>
+        <td>
+            {% if vendor.approval_status == 'pending' %}
+                <a href="{% url 'superAdmin:approve_vendor' vendor.id %}">Accept</a> |
+                <a href="{% url 'superAdmin:reject_vendor' vendor.id %}">Reject</a>
+            {% else %}
+                Processed
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>

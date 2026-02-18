@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Delivery Agents - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+        }
+        
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        input, select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
+            color: white;
+        }
+        
+        .status-approved {
+            background: #28a745;
+        }
+        
+        .status-active {
+            background: #667eea;
+        }
+        
+        .status-blocked {
+            background: #dc3545;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            font-size: 12px;
+            transition: all 0.3s;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-view:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-block {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-block:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+        }
+        
+        .btn-unblock {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-unblock:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚚 Manage Delivery Agents</h1>
+            <a href="/superAdmin/" class="back-btn">Back to Dashboard</a>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-count">0</div>
+                <div class="stat-label">Total Agents</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="active-count">0</div>
+                <div class="stat-label">Active Agents</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="blocked-count">0</div>
+                <div class="stat-label">Blocked Agents</div>
+            </div>
+        </div>
+        
+        <div class="filters">
+            <div class="filter-row">
+                <input type="text" id="searchBox" placeholder="Search by company name or email...">
+                <select id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <select id="blockedFilter">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="blocked">Blocked</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="agentTable">
+                <thead>
+                    <tr>
+                        <th>Company Name</th>
+                        <th>Email</th>
+                        <th>Username</th>
+                        <th>Vehicle Type</th>
+                        <th>Approval Status</th>
+                        <th>Account Status</th>
+                        <th>Joined Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <p>No delivery agents found</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        let allAgents = [];
+        
+        // Fetch all delivery agents from API
+        async function loadAllAgents() {
+            try {
+                const response = await fetch('/superAdmin/api/delivery-agents/', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json();
+                
+                allAgents = data;
+                updateStats();
+                renderTable(allAgents);
+            } catch (error) {
+                console.error('Error loading agents:', error);
+                document.getElementById('tableBody').innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <p>Error loading data. Please try again.</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function updateStats() {
+            document.getElementById('total-count').textContent = allAgents.length;
+            document.getElementById('active-count').textContent = 
+                allAgents.filter(a => !a.is_blocked).length;
+            document.getElementById('blocked-count').textContent = 
+                allAgents.filter(a => a.is_blocked).length;
+        }
+        
+        function renderTable(agents) {
+            const tableBody = document.getElementById('tableBody');
+            
+            if (agents.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <p>No delivery agents found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = agents.map(agent => `
+                <tr>
+                    <td>${agent.company_name || 'N/A'}</td>
+                    <td>${agent.email}</td>
+                    <td>${agent.username}</td>
+                    <td>${agent.vehicle_type || 'N/A'}</td>
+                    <td><span class="status-badge ${getApprovalClass(agent.approval_status)}">${agent.approval_status_display}</span></td>
+                    <td><span class="status-badge ${agent.is_blocked ? 'status-blocked' : 'status-active'}">${agent.is_blocked ? 'Blocked' : 'Active'}</span></td>
+                    <td>${new Date(agent.date_joined).toLocaleDateString()}</td>
+                    <td>
+                        <a href="/superAdmin/delivery-agents/${agent.id}/" class="btn btn-view">View</a>
+                        ${agent.is_blocked ? 
+                            `<a href="#" onclick="unblockAgent(${agent.id})" class="btn btn-unblock">Unblock</a>` :
+                            `<a href="#" onclick="blockAgent(${agent.id})" class="btn btn-block">Block</a>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function getApprovalClass(status) {
+            const classMap = {
+                'approved': 'status-approved',
+                'pending': 'status-active',
+                'rejected': 'status-blocked'
+            };
+            return classMap[status] || 'status-active';
+        }
+        
+        // Filter functionality
+        function applyFilters() {
+            let filtered = allAgents;
+            
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(a => 
+                    (a.company_name && a.company_name.toLowerCase().includes(searchTerm)) ||
+                    (a.email && a.email.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            const statusFilter = document.getElementById('statusFilter').value;
+            if (statusFilter) {
+                filtered = filtered.filter(a => a.approval_status === statusFilter);
+            }
+            
+            const blockedFilter = document.getElementById('blockedFilter').value;
+            if (blockedFilter === 'active') {
+                filtered = filtered.filter(a => !a.is_blocked);
+            } else if (blockedFilter === 'blocked') {
+                filtered = filtered.filter(a => a.is_blocked);
+            }
+            
+            renderTable(filtered);
+            updateStats();
+        }
+        
+        document.getElementById('searchBox').addEventListener('keyup', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('blockedFilter').addEventListener('change', applyFilters);
+        
+        function blockAgent(agentId) {
+            const reason = prompt('Enter reason for blocking:');
+            if (reason !== null && reason.trim()) {
+                console.log(`Block agent ${agentId} with reason: ${reason}`);
+                // API call would go here
+                loadAllAgents();
+            }
+        }
+        
+        function unblockAgent(agentId) {
+            const reason = prompt('Enter reason for unblocking (optional):');
+            if (reason !== null) {
+                console.log(`Unblock agent ${agentId} with reason: ${reason}`);
+                // API call would go here
+                loadAllAgents();
+            }
+        }
+        
+        // Load agents on page load
+        document.addEventListener('DOMContentLoaded', loadAllAgents);
+    </script>
+</body>
+</html>

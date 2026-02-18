@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from .models import VendorProfile, Product
+from django.contrib.auth import get_user_model
+from .models import VendorProfile, Product, ProductImage
+
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -44,12 +46,17 @@ class VendorProfileSerializer(serializers.ModelSerializer):
     business_type_display = serializers.CharField(source='get_business_type_display', read_only=True)
     id_type_display = serializers.CharField(source='get_id_type_display', read_only=True)
     
+    id_proof_url = serializers.HyperlinkedIdentityField(view_name='serve_vendor_document', lookup_field='id', lookup_url_kwarg='profile_id')
+    # Since we have two documents, we might need more specific names or just use a method field
+    id_proof_url = serializers.SerializerMethodField()
+    pan_card_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = VendorProfile
         fields = [
             'id', 'user', 'shop_name', 'shop_description', 'address',
             'business_type', 'business_type_display', 'id_type', 'id_type_display',
-            'id_number', 'id_proof_file', 'approval_status', 'approval_status_display',
+            'id_number', 'id_proof_url', 'pan_card_url', 'approval_status', 'approval_status_display',
             'rejection_reason', 'is_blocked', 'blocked_reason',
             'created_at', 'updated_at'
         ]
@@ -57,6 +64,18 @@ class VendorProfileSerializer(serializers.ModelSerializer):
             'id', 'user', 'approval_status', 'rejection_reason',
             'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
         ]
+
+    def get_id_proof_url(self, obj):
+        if obj.id_proof_data:
+            from django.urls import reverse
+            return reverse('serve_vendor_document', kwargs={'profile_id': obj.id, 'doc_type': 'id_proof'})
+        return None
+
+    def get_pan_card_url(self, obj):
+        if obj.pan_card_data:
+            from django.urls import reverse
+            return reverse('serve_vendor_document', kwargs={'profile_id': obj.id, 'doc_type': 'pan_card'})
+        return None
 
 
 class VendorRegistrationSerializer(serializers.Serializer):
@@ -68,19 +87,37 @@ class VendorRegistrationSerializer(serializers.Serializer):
     id_type = serializers.ChoiceField(choices=['gst', 'pan'])
     id_number = serializers.CharField(max_length=50)
     id_proof_file = serializers.FileField()
+    pan_card_file = serializers.FileField(required=False)
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer for ProductImage model"""
+    image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image_url', 'uploaded_at']
+
+    def get_image_url(self, obj):
+        if obj.image_data:
+            from django.urls import reverse
+            return reverse('serve_product_image', kwargs={'image_id': obj.id})
+        return None
 
 
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for Product model"""
     vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
     
     class Meta:
         model = Product
         fields = [
-            'id', 'vendor', 'vendor_name', 'name', 'description', 'price',
-            'quantity', 'image', 'status', 'status_display', 'is_blocked',
-            'blocked_reason', 'created_at', 'updated_at'
+            'id', 'vendor', 'vendor_name', 'name', 'description', 'category', 
+            'category_display', 'price', 'quantity', 'images', 'status', 
+            'status_display', 'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'vendor', 'is_blocked', 'blocked_reason', 'created_at', 'updated_at'
@@ -91,7 +128,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating products"""
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'quantity', 'image', 'status']
+        fields = ['name', 'description', 'category', 'price', 'quantity', 'status']
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -101,6 +138,6 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'vendor_name', 'price', 'quantity',
+            'id', 'name', 'category', 'vendor_name', 'price', 'quantity',
             'status', 'is_blocked', 'created_at'
         ]

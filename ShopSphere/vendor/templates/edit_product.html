@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Product - E-Commerce Platform</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .form-header {
+            margin-bottom: 30px;
+        }
+
+        .form-header h1 {
+            color: #333;
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+
+        .form-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .submit-btn {
+            flex: 1;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cancel-btn {
+            flex: 1;
+            padding: 12px;
+            background: #e5e7eb;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+
+        <div class="form-header">
+            <h1>✏️ Edit Product</h1>
+            <p>Update your product details</p>
+        </div>
+
+        {% if error %}
+        <div style="background:#fee2e2;border:1px solid #ef4444;color:#b91c1c;
+                    padding:12px;border-radius:8px;margin-bottom:20px;text-align:center;">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Product Name -->
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" name="name" value="{{ product.name }}" required>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" required>{{ product.description }}</textarea>
+            </div>
+
+            <!-- Category -->
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category" name="category" required>
+                    {% for category in categories %}
+                    {% if product.category.id == category.id %}
+                    <option value="{{ category.id }}" data-slug="{{ category.slug }}" selected>{{ category.name }}
+                    </option>
+                    {% else %}
+                    <option value="{{ category.id }}" data-slug="{{ category.slug }}">{{ category.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Custom Category -->
+            <div class="form-group" id="custom-category-group" style="display:none;">
+                <label>Custom Category</label>
+                <input type="text" id="custom_category" name="custom_category"
+                    value="{% if product.category.slug == 'other' %}{{ product.category.name }}{% endif %}">
+            </div>
+
+            <!-- Price & Quantity -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" name="price" step="0.01" value="{{ product.price }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" name="quantity" min="0" value="{{ product.quantity }}" required>
+                </div>
+            </div>
+
+            <!-- Images -->
+            <div class="form-group">
+                <label>Product Images (Minimum 4)</label>
+                <input type="file" name="images" accept="image/*" multiple>
+                {% if product.images.all %}
+                <div style="margin-top:15px;">
+                    <p style="margin-bottom:8px;font-weight:500;">Existing Images:</p>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+                        {% for image in product.images.all %}
+                        <div>
+                            <img src="{% url 'serve_product_image' image.id %}" style="width:100%;height:80px;object-fit:cover;
+                                        border-radius:5px;border:1px solid #ddd;">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-group">
+                <button type="submit" class="submit-btn">Update Product</button>
+                <a href="{% url 'vendor_home' %}" class="cancel-btn">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        const categorySelect = document.getElementById('category');
+        const customCategoryGroup = document.getElementById('custom-category-group');
+
+        function toggleCustomCategory() {
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+            if (selectedOption && selectedOption.getAttribute('data-slug') === 'other') {
+                customCategoryGroup.style.display = 'block';
+            } else {
+                customCategoryGroup.style.display = 'none';
+            }
+        }
+
+        categorySelect.addEventListener('change', toggleCustomCategory);
+        toggleCustomCategory();
+    </script>
+
+</body>
+
+</html>
