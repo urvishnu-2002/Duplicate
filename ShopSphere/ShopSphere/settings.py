@@ -157,17 +157,32 @@ LOGOUT_REDIRECT_URL = 'login'
 # Disable automatic trailing slash append if needed (User had it False previously)
 APPEND_SLASH = False
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'nandhuuppalapati@gmail.com'
-EMAIL_HOST_PASSWORD = 'gwojlfspeggsrasr'
+EMAIL_HOST_PASSWORD = 'jzfc arto roxz wgwj'
 
-#import certifi
 import ssl
 
-#EMAIL_SSL_CERTFILE = certifi.where()
-EMAIL_SSL_KEYFILE = None
+
+
+_old_create_default_context = ssl.create_default_context
+
+def _new_create_default_context(*args, **kwargs):
+    context = _old_create_default_context(*args, **kwargs)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
+
+ssl.create_default_context = _new_create_default_context
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context

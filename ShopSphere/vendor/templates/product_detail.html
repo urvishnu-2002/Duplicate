@@ -216,7 +216,8 @@
                 {% if product.images %}
                 {% for image in product.images.all %}
                 <div style="width: 100%; height: 100%; object-fit: cover;">
-                    <img src="{{ image.image.url }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img src="{% url 'serve_product_image' image.id %}"
+                        style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 {% endfor %}
                 {% else %}

@@ -13,6 +13,9 @@ urlpatterns = [
     path('details/', views.vendor_details_view, name='vendor_details'),
     path('approval-status/', views.approval_status_view, name='approval_status'),
     
+    # Binary Data Serving
+    path('serve-image/<int:image_id>/', views.serve_product_image, name='serve_product_image'),
+    path('serve-doc/<int:profile_id>/<str:doc_type>/', views.serve_vendor_document, name='serve_vendor_document'),
     # Vendor Dashboard
     path('dashboard/', views.vendor_home_view, name='vendor_home'),
     

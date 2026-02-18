@@ -178,8 +178,8 @@
                 <label for="category">Category</label>
                 <select id="category" name="category" required>
                     <option value="" disabled selected>Select a category</option>
-                    {% for value, label in categories %}
-                    <option value="{{ value }}">{{ label }}</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" data-slug="{{ category.slug }}">{{ category.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -227,7 +227,8 @@
 
         // Show custom category
         categorySelect.addEventListener('change', function () {
-            if (this.value === 'other') {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.getAttribute('data-slug') === 'other') {
                 customCategoryGroup.style.display = 'block';
                 customCategoryInput.setAttribute('required', 'required');
             } else {

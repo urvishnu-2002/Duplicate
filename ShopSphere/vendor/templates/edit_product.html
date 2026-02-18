@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Product - E-Commerce Platform</title>
+
     <style>
         * {
             margin: 0;
@@ -101,12 +102,6 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
         .cancel-btn {
@@ -118,16 +113,10 @@
             border-radius: 5px;
             font-size: 16px;
             font-weight: 600;
-            cursor: pointer;
             text-decoration: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .cancel-btn:hover {
-            background: #d1d5db;
         }
 
         @media (max-width: 600px) {
@@ -144,14 +133,15 @@
 
 <body>
     <div class="form-container">
+
         <div class="form-header">
             <h1>✏️ Edit Product</h1>
             <p>Update your product details</p>
         </div>
 
         {% if error %}
-        <div
-            style="background-color: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+        <div style="background:#fee2e2;border:1px solid #ef4444;color:#b91c1c;
+                    padding:12px;border-radius:8px;margin-bottom:20px;text-align:center;">
             {{ error }}
         </div>
         {% endif %}
@@ -159,83 +149,98 @@
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
 
+            <!-- Product Name -->
             <div class="form-group">
-                <label for="name">Product Name</label>
-                <input type="text" id="name" name="name" value="{{ product.name }}" required>
+                <label>Product Name</label>
+                <input type="text" name="name" value="{{ product.name }}" required>
             </div>
 
+            <!-- Description -->
             <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" required>{{ product.description }}</textarea>
+                <label>Description</label>
+                <textarea name="description" required>{{ product.description }}</textarea>
             </div>
 
+            <!-- Category -->
             <div class="form-group">
-                <label for="category">Category</label>
+                <label>Category</label>
                 <select id="category" name="category" required>
-                    {% for value, label in categories %}
-                    <option value="{{ value }}" {% if product.category==value or (value=='other' and product.category
-                        not in choice_values) %}selected{% endif %}>{{ label }}</option>
+                    {% for category in categories %}
+                    {% if product.category.id == category.id %}
+                    <option value="{{ category.id }}" data-slug="{{ category.slug }}" selected>{{ category.name }}
+                    </option>
+                    {% else %}
+                    <option value="{{ category.id }}" data-slug="{{ category.slug }}">{{ category.name }}</option>
+                    {% endif %}
                     {% endfor %}
                 </select>
             </div>
 
-            <div class="form-group" id="custom-category-group"
-                style="display: {% if product.category not in choice_values %}block{% else %}none{% endif %};">
-                <label for="custom_category">Custom Category Name</label>
+            <!-- Custom Category -->
+            <div class="form-group" id="custom-category-group" style="display:none;">
+                <label>Custom Category</label>
                 <input type="text" id="custom_category" name="custom_category"
-                    value="{% if product.category not in choice_values %}{{ product.category }}{% endif %}"
-                    placeholder="Enter custom category">
+                    value="{% if product.category.slug == 'other' %}{{ product.category.name }}{% endif %}">
             </div>
 
+            <!-- Price & Quantity -->
             <div class="form-row">
                 <div class="form-group">
-                    <label for="price">Price (₹)</label>
-                    <input type="number" id="price" name="price" step="0.01" value="{{ product.price }}" required>
+                    <label>Price (₹)</label>
+                    <input type="number" name="price" step="0.01" value="{{ product.price }}" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="quantity">Quantity in Stock</label>
-                    <input type="number" id="quantity" name="quantity" min="0" value="{{ product.quantity }}" required>
+                    <label>Quantity</label>
+                    <input type="number" name="quantity" min="0" value="{{ product.quantity }}" required>
                 </div>
             </div>
 
+            <!-- Images -->
             <div class="form-group">
-                <label for="image">Product Image</label>
-                <input type="file" id="image" name="image" accept="image/*">
-                {% if product.image %}
-                <p style="color: #666; font-size: 12px; margin-top: 5px;">
-                    Current image: <a href="{{ product.image.url }}" target="_blank">View</a>
-                </p>
+                <label>Product Images (Minimum 4)</label>
+                <input type="file" name="images" accept="image/*" multiple>
+                {% if product.images.all %}
+                <div style="margin-top:15px;">
+                    <p style="margin-bottom:8px;font-weight:500;">Existing Images:</p>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+                        {% for image in product.images.all %}
+                        <div>
+                            <img src="{% url 'serve_product_image' image.id %}" style="width:100%;height:80px;object-fit:cover;
+                                        border-radius:5px;border:1px solid #ddd;">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
                 {% endif %}
             </div>
 
+            <!-- Buttons -->
             <div class="button-group">
                 <button type="submit" class="submit-btn">Update Product</button>
                 <a href="{% url 'vendor_home' %}" class="cancel-btn">Cancel</a>
             </div>
+
         </form>
     </div>
 
     <script>
         const categorySelect = document.getElementById('category');
         const customCategoryGroup = document.getElementById('custom-category-group');
-        const customCategoryInput = document.getElementById('custom_category');
 
         function toggleCustomCategory() {
-            if (categorySelect.value === 'other') {
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+            if (selectedOption && selectedOption.getAttribute('data-slug') === 'other') {
                 customCategoryGroup.style.display = 'block';
-                customCategoryInput.setAttribute('required', 'required');
             } else {
                 customCategoryGroup.style.display = 'none';
-                customCategoryInput.removeAttribute('required');
             }
         }
 
         categorySelect.addEventListener('change', toggleCustomCategory);
-
-        // Initial check
         toggleCustomCategory();
     </script>
+
 </body>
 
 </html>
