@@ -151,7 +151,7 @@
             <p
                 style="font-size: 0.9em; color: #ccc; margin-bottom: 15px; height: 3em; overflow: hidden; text-overflow: ellipsis;">
                 {{ product.description }}</p>
-            <a href="{% url 'add_to_cart' product.id %}" class="btn">Add to Cart</a>
+            <a href="{% url 'user_product_detail' product.id %}" class="btn">Open</a>
         </div>
         {% endfor %}
     </div>

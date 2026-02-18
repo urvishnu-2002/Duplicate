@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} - ShopSphere</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6C63FF;
+            --secondary: #4CAF50;
+            --dark: #2C3E50;
+            --light: #ECF0F1;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .product-images img {
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .product-info h1 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+
+        .price {
+            font-size: 2em;
+            color: var(--secondary);
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);
+        }
+
+        .reviews-section {
+            margin-top: 60px;
+        }
+
+        .review-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .rating {
+            color: #FFD700;
+        }
+
+        .review-form {
+            display: none;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 30px;
+            border-radius: 20px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            font-family: inherit;
+        }
+
+        .star-rating {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+        }
+
+        .star-rating input {
+            display: none;
+        }
+
+        .star-rating label {
+            font-size: 2em;
+            color: #444;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star-rating label:hover,
+        .star-rating label:hover~label,
+        .star-rating input:checked~label {
+            color: #FFD700;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1 style="margin:0; cursor:pointer;" onclick="location.href='{% url 'home' %}'">ShopSphere</h1>
+        <div class="nav-links">
+            <a href="{% url 'home' %}" style="color:white; text-decoration:none;">Back to Shop</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="product-grid">
+            <div class="product-images">
+                {% if product.images.exists %}
+                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                <div
+                    style="height:300px; background:rgba(0,0,0,0.2); border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:5em;">
+                    📦</div>
+                {% endif %}
+            </div>
+            <div class="product-info">
+                <h1>{{ product.name }}</h1>
+                <p class="price">${{ product.price }}</p>
+                <p style="line-height:1.6; color:#ccc;">{{ product.description }}</p>
+
+                {% if user.is_authenticated %}
+                {% if user_review %}
+                {% if can_edit_review %}
+                <button class="btn"
+                    onclick="document.getElementById('reviewForm').style.display='block'; this.style.display='none'">Edit
+                    Your Review</button>
+                <p style="font-size: 0.8em; color: #aaa; margin-top: 10px;">You have {{ days_left }} days left to edit
+                    your review.</p>
+                {% else %}
+                <p style="font-size: 0.9em; color: #ffeb3b; margin-top: 20px;">You have already reviewed this product.
+                    The 5-day editing window has passed.</p>
+                {% endif %}
+                {% else %}
+                <button class="btn"
+                    onclick="document.getElementById('reviewForm').style.display='block'; this.style.display='none'">Write
+                    a Review</button>
+                {% endif %}
+                {% else %}
+                <a href="{% url 'user_login' %}?next={{ request.path }}" class="btn">Login to Write a Review</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="reviewForm" class="review-form">
+            <h2 style="margin-top:0;">{% if user_review %}Edit Your Review{% else %}Your Review{% endif %}</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" name="reviewer_name" placeholder="Enter your display name"
+                        value="{{ user_review.reviewer_name|default:user.username }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Rating</label>
+                    <div class="star-rating">
+                        <input type="radio" id="star5" name="rating" value="5" {% if user_review.rating == 5 %}checked{% endif %} /><label for="star5">★</label>
+                        <input type="radio" id="star4" name="rating" value="4" {% if user_review.rating == 4 %}checked{% endif %} /><label for="star4">★</label>
+                        <input type="radio" id="star3" name="rating" value="3" {% if user_review.rating == 3 %}checked{% endif %} /><label for="star3">★</label>
+                        <input type="radio" id="star2" name="rating" value="2" {% if user_review.rating == 2 %}checked{% endif %} /><label for="star2">★</label>
+                        <input type="radio" id="star1" name="rating" value="1" {% if user_review.rating == 1 %}checked{% endif %} /><label for="star1">★</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Your Comment</label>
+                    <textarea name="comment" rows="4" placeholder="Tell us what you think..."
+                        required>{{ user_review.comment }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Photo</label>
+                    <input type="file" name="pictures" accept="image/*">
+                </div>
+
+                <button type="submit" class="btn">{% if user_review %}Update Review{% else %}Submit Review{% endif %}</button>
+                <button type="button" class="btn" style="background:#444; margin-left:10px;"
+                    onclick="location.reload()">Cancel</button>
+            </form>
+        </div>
+
+        <div class="reviews-section">
+            <h2>Customer Reviews</h2>
+            {% for review in reviews %}
+            <div class="review-card">
+                <div class="review-header">
+                    <strong>{{ review.reviewer_name|default:review.user.username }}</strong>
+                    <span class="rating">
+                        {% for i in "12345" %}
+                        {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %} {% endfor %} </span>
+                </div>
+                <p style="margin:10px 0; color:#ddd;">{{ review.comment }}</p>
+                {% if review.pictures %}
+                <img src="{{ review.pictures.url }}" style="max-width:200px; border-radius:10px; margin-top:10px;">
+                {% endif %}
+                <small style="color:#777;">{{ review.created_at|date:"F d, Y" }}</small>
+            </div>
+            {% empty %}
+            <p style="color:#777;">No reviews yet. Be the first to review!</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+
+</html>
