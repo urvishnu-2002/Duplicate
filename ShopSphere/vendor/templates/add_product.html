@@ -65,6 +65,18 @@
             font-size: 14px;
             font-family: inherit;
             transition: border-color 0.3s;
+            background-color: white;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .form-group select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 35px;
         }
 
         .form-group input:focus,
@@ -177,10 +189,13 @@
             <div class="form-group">
                 <label for="category">Category</label>
                 <select id="category" name="category" required>
-                    <option value="" disabled selected>Select a category</option>
+                    <option value="">-- Select a category --</option>
                     {% for category in categories %}
-                    <option value="{{ category.id }}" data-slug="{{ category.slug }}">{{ category.name }}</option>
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% empty %}
+                    <option disabled>No categories available</option>
                     {% endfor %}
+                    <option value="other">Other (Custom)</option>
                 </select>
             </div>
 
@@ -225,15 +240,15 @@
         const preview = document.getElementById('preview');
         const form = document.getElementById('productForm');
 
-        // Show custom category
+        // Show custom category input when "Other" is selected
         categorySelect.addEventListener('change', function () {
-            const selectedOption = this.options[this.selectedIndex];
-            if (selectedOption.getAttribute('data-slug') === 'other') {
+            if (this.value === 'other') {
                 customCategoryGroup.style.display = 'block';
                 customCategoryInput.setAttribute('required', 'required');
             } else {
                 customCategoryGroup.style.display = 'none';
                 customCategoryInput.removeAttribute('required');
+                customCategoryInput.value = ''; // Clear the input
             }
         });
 

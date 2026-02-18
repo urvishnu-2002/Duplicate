@@ -8,6 +8,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
 User = get_user_model()
 from django.contrib.auth.decorators import user_passes_test, login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -65,6 +66,7 @@ def serve_vendor_document(request, profile_id, doc_type):
 # AUTHENTICATION VIEWS - VENDOR REGISTRATION AND LOGIN
 # ============================================================================
 
+@csrf_exempt
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -434,24 +436,31 @@ def add_product_view(request):
         category = None
         
         # Handle custom category or selection
-        if category_id:
+        if category_id and category_id != 'other':
             try:
                 category = Category.objects.get(id=category_id)
-                # Check if it was "Other" and custom name provided
-                if category.slug == 'other' and custom_category_name:
-                    # Create new category
-                    slug = slugify(custom_category_name)
-                    category, created = Category.objects.get_or_create(
-                        slug=slug,
-                        defaults={'name': custom_category_name}
-                    )
             except Category.DoesNotExist:
-                # Fallback to 'other' or None
                 pass
         
-        # If no category resolved, try to get "other"
+        # Handle "Other" category with custom name
+        if category_id == 'other' or (category_id and not category and custom_category_name):
+            if custom_category_name:
+                # Create new category from custom name
+                slug = slugify(custom_category_name)
+                category, created = Category.objects.get_or_create(
+                    slug=slug,
+                    defaults={'name': custom_category_name}
+                )
+        
+        # If still no category, try to get "other" fallback or error
         if not category:
-             category = Category.objects.filter(slug='other').first()
+            category = Category.objects.filter(slug='other').first()
+            if not category:
+                return render(request, 'add_product.html', {
+                    'vendor': vendor,
+                    'categories': Category.objects.all(),
+                    'error': 'Please select a valid category or provide a custom category name.'
+                })
 
 
         # 🔥 Get multiple images
