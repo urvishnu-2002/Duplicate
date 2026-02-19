@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (AuthUser, Cart, CartItem, Order, OrderItem, Address, 
                      UserWallet, WalletTransaction, OrderReturn, Refund, 
-                     TwoFactorAuth, Notification, Dispute, Coupon, CouponUsage)
+                     TwoFactorAuth, Notification, Dispute, Coupon, CouponUsage,
+                     OrderTracking)
 from vendor.models import Product, ProductImage
 
 
@@ -9,7 +10,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuthUser
         fields = ['username', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'username': {'validators': []},  # Disable unique validation
+            'email': {'validators': []}     # Disable unique validation
+        }
 
     def create(self, validated_data):
         user = AuthUser.objects.create_user(**validated_data)
@@ -24,11 +29,15 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
+    vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
+    vendor_id = serializers.IntegerField(source='vendor.id', read_only=True)
+    
     class Meta:
         model = Product
         fields = [
             'id', 'name', 'description', 'category', 'price', 
-            'quantity', 'images', 'status', 'is_blocked', 'created_at'
+            'quantity', 'images', 'status', 'is_blocked', 'created_at',
+            'vendor_name', 'vendor_id'
         ]
 
 
@@ -61,13 +70,20 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class OrderTrackingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderTracking
+        fields = '__all__'
+
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    tracking_history = OrderTrackingSerializer(many=True, read_only=True)
     
     class Meta:
         model = Order
         fields = ['id', 'user', 'payment_method', 'payment_status', 'total_amount', 
-                  'status', 'delivery_address', 'created_at', 'items']
+                  'status', 'delivery_address', 'created_at', 'items', 'tracking_history']
 
 
 class CartItemSerializer(serializers.ModelSerializer):

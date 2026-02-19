@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body class="bg-gray-50 flex h-screen font-sans">
 
     <!-- Sidebar -->
@@ -16,7 +18,8 @@
             <h1 class="text-xl font-bold tracking-tight">Delivery Portal</h1>
         </div>
         <nav class="flex-1 px-4 py-4 space-y-2">
-            <a href="#" class="flex items-center gap-3 py-3 px-4 rounded-lg bg-indigo-600 shadow-lg shadow-indigo-500/20">
+            <a href="#"
+                class="flex items-center gap-3 py-3 px-4 rounded-lg bg-indigo-600 shadow-lg shadow-indigo-500/20">
                 <i class="fas fa-th-large w-5"></i> Dashboard
             </a>
             <a href="#" class="flex items-center gap-3 py-3 px-4 rounded-lg hover:bg-slate-800 transition">
@@ -53,13 +56,13 @@
         {% if messages %}
         <div class="mb-4">
             {% for message in messages %}
-                <div class="p-4 rounded-lg mb-2
+            <div class="p-4 rounded-lg mb-2
                             {% if message.tags == 'success' %}bg-green-100 text-green-700
                             {% elif message.tags == 'error' %}bg-red-100 text-red-700
                             {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700
                             {% endif %}">
-                    {{ message }}
-                </div>
+                {{ message }}
+            </div>
             {% endfor %}
         </div>
         {% endif %}
@@ -114,10 +117,10 @@
                 <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <p class="text-sm font-bold text-gray-900">{{ order.order_id }}</p>
-                            <p class="text-sm text-gray-500">{{ order.customer_name }}</p>
+                            <p class="text-sm font-bold text-gray-900">#{{ order.order.order_number }}</p>
+                            <p class="text-sm text-gray-500">{{ order.order.user.username }}</p>
                         </div>
-                        <span class="text-green-600 font-bold text-sm">+${{ order.earning }}</span>
+                        <span class="text-green-600 font-bold text-sm">+${{ order.delivery_fee }}</span>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-gray-500 mb-6">
                         <i class="fas fa-map-marker-alt text-gray-400"></i>
@@ -125,9 +128,10 @@
                     </div>
                     <div class="flex gap-3">
                         <!-- Accept Order Form -->
-                        <form method="post" action="{% url 'accept_order' order.id %}" class="flex-1">
+                        <form method="post" action="{% url 'accept_order' order.order.id %}" class="flex-1">
                             {% csrf_token %}
-                            <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition">
+                            <button type="submit"
+                                class="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition">
                                 <i class="fas fa-check mr-2"></i> Accept Order
                             </button>
                         </form>
@@ -135,6 +139,10 @@
                             View Details
                         </button>
                     </div>
+                </div>
+                {% empty %}
+                <div class="p-6 text-center text-gray-500">
+                    No available orders assigned to you at the moment.
                 </div>
                 {% endfor %}
             </div>
@@ -149,12 +157,18 @@
                         {% for order in recent_orders %}
                         <tr class="hover:bg-gray-50 transition">
                             <td class="p-4">
-                                <p class="font-bold text-sm">{{ order.order_id }}</p>
-                                <p class="text-xs text-gray-500">{{ order.customer_name }}</p>
+                                <p class="font-bold text-sm">#{{ order.order.order_number }}</p>
+                                <p class="text-xs text-gray-500">{{ order.order.user.username }}</p>
                             </td>
                             <td class="p-4 text-right">
-                                <p class="text-sm font-bold text-green-600">+${{ order.earning }}</p>
+                                <p class="text-sm font-bold text-green-600">+${{ order.delivery_fee }}</p>
                                 <p class="text-xs text-gray-400 uppercase tracking-widest">Delivered</p>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="p-4 text-center text-gray-500" colspan="2">
+                                No recent deliveries found.
                             </td>
                         </tr>
                         {% endfor %}
@@ -163,23 +177,11 @@
             </div>
         </section>
 
-        <!-- Dummy Agents Section -->
-        <section class="mt-12">
-            <h4 class="text-lg font-bold text-gray-800 mb-6">Agent List (Dummy Data)</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {% for agent in dummy_agents %}
-                <div class="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center font-bold">{{ agent.username|slice:":1"|upper }}</div>
-                    <div>
-                        <p class="font-bold text-gray-900">{{ agent.username }}</p>
-                        <p class="text-xs text-gray-400">{{ agent.email }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+        <!-- Dummy Agents Section Removed -->
         </section>
 
     </main>
 
 </body>
+
 </html>

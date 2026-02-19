@@ -6,9 +6,10 @@ urlpatterns = [
     path('user_login', views.login_api, name='user_login'),
     path('register', views.register_api, name='register'),
     path('logout', views.logout_api, name='logout'),
+    path('me', views.get_user_info, name='user_info'),
 
     # Shop / Product
-   
+    path('', views.home_api, name='home'),
     path('userProducts', views.get_product, name='user_products'),
 
     # Cart
@@ -23,6 +24,10 @@ urlpatterns = [
     path('my_orders', views.my_orders, name='my_orders'),
     path('address', views.address_page, name="address_page"),
     path('delete-address/<int:id>', views.delete_address, name="delete_address"),
+
+    # Returns
+    path('returns/request/<int:order_item_id>', views.request_return_api, name='request_return'),
+    path('returns/my-returns', views.my_returns, name='my_returns'),
 
     # #Reviews
     # '''path('my_reviews', views.user_reviews, name='user_reviews'),

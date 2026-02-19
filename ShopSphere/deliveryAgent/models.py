@@ -53,19 +53,19 @@ class DeliveryAgentProfile(models.Model):
     vehicle_insurance = models.FileField(upload_to='vehicle_docs/', blank=True, null=True)
     
     # License & Documentation
-    license_number = models.CharField(max_length=50, unique=True)
-    license_file = models.FileField(upload_to='license_docs/')
-    license_expires = models.DateField()
+    license_number = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    license_file = models.FileField(upload_to='license_docs/', blank=True, null=True)
+    license_expires = models.DateField(blank=True, null=True)
     
     # Identity Verification
-    id_type = models.CharField(max_length=20, choices=[
+    id_type = models.CharField(max_length=20, default='aadhar', choices=[
         ('aadhar', 'Aadhar'),
         ('passport', 'Passport'),
         ('pan', 'PAN'),
         ('drivers_license', 'Driver\'s License'),
     ])
-    id_number = models.CharField(max_length=50)
-    id_proof_file = models.FileField(upload_to='id_proofs/')
+    id_number = models.CharField(max_length=50, blank=True, null=True)
+    id_proof_file = models.FileField(upload_to='id_proofs/', blank=True, null=True)
     
     # Bank Details for Payout
     bank_holder_name = models.CharField(max_length=100)
@@ -144,7 +144,7 @@ class DeliveryAgentProfile(models.Model):
         return DeliveryCommission.objects.filter(
             agent=self,
             status='pending'
-        ).aggregate(Sum('commission_amount'))['commission_amount__sum'] or Decimal('0.00')
+        ).aggregate(Sum('total_commission'))['total_commission__sum'] or Decimal('0.00')
 
 
 # ===============================================
@@ -231,6 +231,14 @@ class DeliveryAssignment(models.Model):
         self.status = 'accepted'
         self.accepted_at = timezone.now()
         self.save()
+        
+        # Update order status to shipping
+        if self.order:
+            self.order.status = 'shipping'
+            self.order.save()
+            
+            # Transition all items to out_for_delivery status ONLY after agent accepts
+            self.order.items.all().update(vendor_status='out_for_delivery')
     
     def start_delivery(self):
         """Mark delivery as started (picked up from vendor)"""
@@ -244,11 +252,80 @@ class DeliveryAssignment(models.Model):
         self.save()
     
     def mark_delivered(self):
-        """Mark delivery as completed"""
-        self.status = 'delivered'
+        """Mark delivery as completed, credit agent wallet and create commission record"""
+        if self.status == 'delivered':
+            return
+            
+        from user.models import UserWallet, Order, OrderItem, OrderTracking
+        from .models import DeliveryCommission, DeliveryDailyStats
+        
         self.delivery_time = timezone.now()
-        self.completed_at = timezone.now()
+        self.completed_at = self.delivery_time
+        self.status = 'delivered'
         self.save()
+
+        # 1. Update order and item status
+        if self.order:
+            self.order.status = 'delivered'
+            self.order.delivered_at = self.delivery_time
+            self.order.save()
+            
+            # Update all items in the order to delivered
+            self.order.items.all().update(vendor_status='delivered')
+
+            # Add tracking record
+            OrderTracking.objects.create(
+                order=self.order,
+                status='Delivered',
+                location=self.delivery_city or 'City N/A',
+                notes=f'Order delivered by agent {self.agent.user.username}'
+            )
+
+        # 2. Calculate Commission Based on Type (Local vs Out-of-city)
+        fee = self.delivery_fee or Decimal('0.00')
+        d_city = str(self.delivery_city or "City N/A").lower()
+        a_city = str(self.agent.city or "Agent City N/A").lower()
+        
+        is_local = d_city == a_city
+        
+        distance_bonus = Decimal('0.00')
+        if not is_local:
+            # Out-of-city bonus: 20% of base fee
+            distance_bonus = fee * Decimal('0.20')
+        
+        total_commission = fee + distance_bonus
+
+        # Create commission record
+        commission = DeliveryCommission.objects.create(
+            agent=self.agent,
+            delivery_assignment=self,
+            base_fee=fee,
+            distance_bonus=distance_bonus,
+            total_commission=total_commission,
+            status='approved',
+            approved_at=timezone.now(),
+            notes="Local Delivery" if is_local else "Out-of-city Delivery"
+        )
+        
+        # 3. Credit agent's wallet
+        wallet, created = UserWallet.objects.get_or_create(user=self.agent.user)
+        wallet_desc = f"Delivery Commission for Order {self.order.order_number if self.order else 'N/A'}"
+        wallet.add_balance(total_commission, wallet_desc)
+        
+        # 4. Update daily stats
+        stats, created = DeliveryDailyStats.objects.get_or_create(
+            agent=self.agent,
+            date=timezone.now().date()
+        )
+        stats.total_deliveries_completed += 1
+        stats.total_earnings += total_commission
+        stats.save()
+        
+        # 5. Update agent profile stats
+        self.agent.total_deliveries += 1
+        self.agent.completed_deliveries += 1
+        self.agent.total_earnings = (self.agent.total_earnings or Decimal('0.00')) + total_commission
+        self.agent.save()
     
     def mark_failed(self):
         """Mark delivery as failed"""

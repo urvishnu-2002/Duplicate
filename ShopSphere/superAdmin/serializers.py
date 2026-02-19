@@ -47,14 +47,27 @@ class AdminProductDetailSerializer(serializers.ModelSerializer):
     vendor_shop_name = serializers.CharField(source='vendor.shop_name', read_only=True)
     vendor_owner = serializers.CharField(source='vendor.user.username', read_only=True)
     approval_logs = ProductApprovalLogSerializer(source='approval_logs.all', many=True, read_only=True)
-    
+    images = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
         fields = [
             'id', 'vendor', 'vendor_shop_name', 'vendor_owner', 'name',
-            'description', 'price', 'quantity', 'image', 'status',
-            'is_blocked', 'blocked_reason', 'created_at', 'approval_logs'
+            'description', 'category', 'price', 'quantity', 'images', 'status',
+            'is_blocked', 'blocked_reason', 'average_rating', 'total_reviews',
+            'created_at', 'approval_logs'
         ]
+
+    def get_images(self, obj):
+        request = self.context.get('request')
+        images = obj.images.all()
+        result = []
+        for img in images:
+            url = img.image.url if img.image else ''
+            if request:
+                url = request.build_absolute_uri(url)
+            result.append({'id': img.id, 'image': url})
+        return result
 
 class AdminVendorListSerializer(serializers.ModelSerializer):
     user_email = serializers.CharField(source='user.email', read_only=True)

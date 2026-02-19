@@ -240,6 +240,7 @@ class VendorProfileCreateSerializer(serializers.ModelSerializer):
     """Vendor registration/creation serializer"""
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)
+    email = serializers.EmailField(write_only=True)
     
     class Meta:
         model = VendorProfile
@@ -247,27 +248,54 @@ class VendorProfileCreateSerializer(serializers.ModelSerializer):
             'shop_name', 'shop_description', 'address', 'business_type',
             'gst_number', 'pan_number', 'pan_name', 'bank_holder_name',
             'bank_account_number', 'bank_ifsc_code', 'shipping_fee',
-            'password', 'password_confirm'
+            'email', 'password', 'password_confirm'
         ]
     
     def validate(self, data):
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError("Passwords do not match")
+            
+        # Check if vendor profile already exists for this email
+        from user.models import AuthUser
+        user = AuthUser.objects.filter(email=data.get('email')).first()
+        if user and hasattr(user, 'vendor_profile'):
+            raise serializers.ValidationError({"email": "This user already has a vendor profile."})
+            
         return data
     
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        # Create user and vendor profile
+        validated_data.pop('password_confirm', None)
         from user.models import AuthUser
         
-        password = validated_data.pop('password')
-        user = AuthUser.objects.create_user(
-            username=validated_data['shop_name'].lower().replace(' ', '_'),
-            role='vendor',
-            **{'first_name': validated_data['shop_name']}
-        )
-        user.set_password(password)
-        user.save()
+        password = validated_data.pop('password', None)
+        email = validated_data.pop('email')
+        
+        # Check for existing user with this email
+        user = AuthUser.objects.filter(email=email).first()
+        
+        if user:
+            # If user exists, update their role to vendor if they are a customer
+            if user.role == 'customer':
+                user.role = 'vendor'
+                user.save()
+            # If they have a different password and user is not logged in, we might want to verify it
+            # But for simplicity, we'll assume the registration flow verified it or it's a new flow
+            if password:
+                user.set_password(password)
+                user.save()
+        else:
+            # Create new user
+            # Use sanitized shop name as username (username is not unique anyway)
+            username = validated_data['shop_name'].lower().replace(' ', '_')
+            user = AuthUser.objects.create_user(
+                username=username,
+                email=email,
+                role='vendor',
+                **{'first_name': validated_data['shop_name']}
+            )
+            if password:
+                user.set_password(password)
+                user.save()
         
         vendor = VendorProfile.objects.create(user=user, **validated_data)
         return vendor
@@ -279,20 +307,24 @@ class VendorProfileCreateSerializer(serializers.ModelSerializer):
 
 class VendorDashboardSerializer(serializers.Serializer):
     """Comprehensive vendor dashboard data"""
-    profile = VendorProfileDetailSerializer(read_only=True)
+    profile = VendorProfileDetailSerializer(source='*', read_only=True)
     order_summary = VendorOrderSummarySerializer(read_only=True)
     recent_orders = serializers.SerializerMethodField()
     recent_analytics = serializers.SerializerMethodField()
-    pending_commissions = VendorCommissionSerializer(many=True, read_only=True)
+    pending_commissions = serializers.SerializerMethodField()
+
+    def get_pending_commissions(self, obj):
+        # obj is VendorProfile
+        return VendorCommissionSerializer(obj.commissions.filter(status='pending')[:5], many=True).data
     
     def get_recent_orders(self, obj):
         from user.models import OrderItem
         recent = OrderItem.objects.filter(vendor=obj).order_by('-order__created_at')[:10]
         return [{
             'id': item.order.id,
-            'product': item.product.name,
+            'product': item.product_name,
             'quantity': item.quantity,
-            'total_price': str(item.total_price),
+            'total_price': str(item.subtotal),
             'vendor_status': item.vendor_status,
             'created_at': item.order.created_at
         } for item in recent]
@@ -309,12 +341,13 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    """Serializer for product list view"""
+    """Serializer for product list view - includes images and description for vendor dashboard"""
     vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
-    
+    images = ProductImageSerializer(many=True, read_only=True)
+
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'category', 'vendor_name', 'price', 'quantity',
-            'status', 'is_blocked', 'created_at'
+            'id', 'name', 'description', 'category', 'vendor_name', 'price', 'quantity',
+            'status', 'is_blocked', 'blocked_reason', 'images', 'created_at'
         ]

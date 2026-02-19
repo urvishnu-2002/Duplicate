@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .api_views import (
-    VendorDashboardView, ProductViewSet,
+    VendorDashboardView, ProductViewSet, VendorProfileViewSet,
     VendorOrdersViewSet, VendorSalesAnalyticsViewSet,
     VendorCommissionViewSet, VendorPaymentViewSet,
     VendorOrderSummaryViewSet
@@ -15,6 +15,7 @@ router.register(r'sales-analytics', VendorSalesAnalyticsViewSet, basename='vendo
 router.register(r'commissions', VendorCommissionViewSet, basename='vendor-commission')
 router.register(r'payments', VendorPaymentViewSet, basename='vendor-payment')
 router.register(r'order-summary', VendorOrderSummaryViewSet, basename='vendor-order-summary')
+router.register(r'profile', VendorProfileViewSet, basename='vendor-profile')
 
 urlpatterns = [
     # Dashboard

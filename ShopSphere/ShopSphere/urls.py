@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from vendor import views as vendor_views
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -13,6 +14,7 @@ urlpatterns = [
     path('vendor/', include('vendor.urls')),
     path('superAdmin/', include('superAdmin.urls')),
     path('deliveryAgent/', include('deliveryAgent.urls')),
+    path('vendor_register', vendor_views.register_view, name='vendor_register_api'),
     
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -182,13 +182,15 @@ LOGOUT_REDIRECT_URL = 'login'
 
 APPEND_SLASH = False
 
-import ssl
-# Email Settings
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email Settings (Gmail SMTP with App Password)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'nandhuuppalapati@gmail.com'
-EMAIL_HOST_PASSWORD = 'gwojlfspeggsrasr'
+EMAIL_USE_SSL = False  # Must be False when USE_TLS=True on port 587
+EMAIL_TIMEOUT = 30     # Timeout in seconds to avoid hanging
+EMAIL_HOST_USER = 'shopsphere090@gmail.com'
+EMAIL_HOST_PASSWORD = 'wdto rqxi hvus hmnl'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

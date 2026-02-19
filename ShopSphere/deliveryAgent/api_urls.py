@@ -4,7 +4,7 @@ from .api_views import (
     DeliveryAgentDashboardView, DeliveryAssignmentViewSet,
     DeliveryTrackingViewSet, DeliveryEarningsViewSet,
     DeliveryPaymentViewSet, DeliveryDailyStatsViewSet,
-    DeliveryFeedbackViewSet
+    DeliveryFeedbackViewSet, DeliveryAgentProfileViewSet
 )
 
 # Create router for viewsets
@@ -15,10 +15,15 @@ router.register(r'earnings', DeliveryEarningsViewSet, basename='delivery-earning
 router.register(r'payments', DeliveryPaymentViewSet, basename='delivery-payment')
 router.register(r'daily-stats', DeliveryDailyStatsViewSet, basename='delivery-stats')
 router.register(r'feedback', DeliveryFeedbackViewSet, basename='delivery-feedback')
+router.register(r'profiles', DeliveryAgentProfileViewSet, basename='delivery-profile')
 
 urlpatterns = [
     # Dashboard
     path('dashboard/', DeliveryAgentDashboardView.as_view(), name='delivery_dashboard'),
+    
+    # Custom registration and profile paths for easier access
+    path('register/', DeliveryAgentProfileViewSet.as_view({'post': 'register'}), name='delivery_register'),
+    path('get_agent/', DeliveryAgentProfileViewSet.as_view({'get': 'get_agent'}), name='get_delivery_agent'),
     
     # Routed endpoints
     path('', include(router.urls)),

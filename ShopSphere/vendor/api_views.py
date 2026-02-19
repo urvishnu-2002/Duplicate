@@ -22,7 +22,8 @@ from .serializers import (
     VendorSalesAnalyticsSerializer, VendorCommissionSerializer, VendorPaymentSerializer,
     VendorOrderSummarySerializer, VendorDashboardSerializer
 )
-from user.models import Order, OrderItem, AuthUser
+from user.models import Order, OrderItem, AuthUser, OrderTracking
+from deliveryAgent.models import DeliveryAgentProfile, DeliveryAssignment
 
 User = get_user_model()
 
@@ -47,7 +48,7 @@ class VendorDashboardView(generics.RetrieveAPIView):
         try:
             return VendorProfile.objects.get(user=self.request.user)
         except VendorProfile.DoesNotExist:
-            raise Response({'error': 'Vendor profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            raise VendorProfile.DoesNotExist()
     
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -69,6 +70,8 @@ class VendorDashboardView(generics.RetrieveAPIView):
             
             serializer = self.get_serializer(vendor)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        except VendorProfile.DoesNotExist:
+            return Response({'error': 'Vendor profile not found. Are you registered as a vendor?'}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({
                 'error': str(e)
@@ -83,6 +86,18 @@ class VendorProfileViewSet(viewsets.ViewSet):
     """Vendor profile management"""
     permission_classes = [IsAuthenticated]
     
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def register(self, request):
+        """Register a new vendor"""
+        serializer = VendorProfileCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            vendor = serializer.save()
+            return Response({
+                'message': 'Registration successful. Please wait for admin approval.',
+                'vendor_id': vendor.id
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def get_vendor(self, request):
         """Get current vendor profile"""
         try:
@@ -122,7 +137,10 @@ class ProductViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):
-        """Get only products belonging to current vendor"""
+        """Get only products belonging to current vendor, or all if admin"""
+        if self.request.user.role == 'admin':
+            return Product.objects.all().order_by('-created_at')
+            
         try:
             vendor = VendorProfile.objects.get(user=self.request.user)
             return Product.objects.filter(vendor=vendor).order_by('-created_at')
@@ -172,7 +190,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
         except VendorProfile.DoesNotExist:
-            return Response({'error': 'Vendor profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Vendor profile not found. Please register as a vendor first.'}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -225,6 +243,29 @@ class ProductViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @action(detail=True, methods=['post'])
+    def toggle_block(self, request, pk=None):
+        """Allow admin to block/unblock a product"""
+        if getattr(request.user, 'role', '') != 'admin':
+            return Response({'error': 'Only admins can block/unblock products'}, status=status.HTTP_403_FORBIDDEN)
+            
+        try:
+            product = self.get_object()
+            product.is_blocked = not product.is_blocked
+            if product.is_blocked:
+                product.blocked_reason = request.data.get('reason', 'Violation of terms')
+            else:
+                product.blocked_reason = None
+            product.save()
+            return Response({
+                'id': product.id,
+                'name': product.name,
+                'is_blocked': product.is_blocked,
+                'blocked_reason': product.blocked_reason
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['get'])
     def active(self, request):
         """Get active products"""
@@ -290,43 +331,213 @@ class VendorOrdersViewSet(viewsets.ViewSet):
                 result.append({
                     'id': item.id,
                     'order_id': item.order.id,
-                    'product': item.product.name,
+                    'order_number': item.order.order_number,
+                    'product': item.product_name,
                     'quantity': item.quantity,
                     'price': str(item.product_price),
                     'total': str(item.subtotal),
                     'vendor_status': item.vendor_status,
                     'order_status': item.order.status,
-                    'customer': item.order.customer.get_full_name(),
-                    'customer_email': item.order.customer.email,
+                    'customer': item.order.user.username, 
+                    'customer_email': item.order.user.email,
+                    'delivery_address': item.order.delivery_address.full_address if item.order.delivery_address else "No Address",
+                    'delivery_city': item.order.delivery_address.city if item.order.delivery_address else "",
                     'created_at': item.order.created_at,
+                    'has_delivery_assignment': hasattr(item.order, 'delivery_assignment'),
+                    'delivery_agent': item.order.delivery_assignment.agent.user.username if hasattr(item.order, 'delivery_assignment') else None
                 })
             
             return Response(result, status=status.HTTP_200_OK)
         except VendorProfile.DoesNotExist:
-            return Response({'error': 'Vendor profile not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Vendor profile not found'}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    @action(detail=True, methods=['post'])
-    def update_status(self, request, pk=None):
-        """Update order item status"""
+
+    @action(detail=True, methods=['get'])
+    def find_delivery_agents(self, request, pk=None):
+        """Find approved delivery agents near the order's city"""
         try:
             vendor = VendorProfile.objects.get(user=request.user)
             order_item = OrderItem.objects.get(id=pk, vendor=vendor)
+            order = order_item.order
             
+            city = ""
+            if order.delivery_address:
+                city = order.delivery_address.city
+            
+            # Simple city-based filter for "nearness"
+            agents = DeliveryAgentProfile.objects.filter(
+                approval_status='approved',
+                is_blocked=False,
+                city__icontains=city
+            ).select_related('user')
+            
+            data = []
+            for a in agents:
+                # Suggested fee: 50 for local (same city), 100+ for out-of-city
+                # Since we filter by city, they are all "local" in a sense, 
+                # but we can check if the phone number prefix or other area indicators match if available.
+                # For now, 50 is the base for local delivery.
+                suggested_fee = 50 if city.lower() == a.city.lower() else 75
+                
+                data.append({
+                    'id': a.id,
+                    'name': a.user.username,
+                    'phone': a.phone_number,
+                    'vehicle': a.vehicle_type,
+                    'city': a.city,
+                    'is_online': a.availability_status == 'online',
+                    'suggested_fee': suggested_fee
+                })
+            return Response(data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+    @action(detail=True, methods=['post'])
+    def assign_delivery_agent(self, request, pk=None):
+        """Assign a delivery agent to an order"""
+        try:
+            vendor = VendorProfile.objects.get(user=request.user)
+            order_item = OrderItem.objects.get(id=pk, vendor=vendor)
+            order = order_item.order
+            
+            agent_id = request.data.get('agent_id')
+            delivery_fee = request.data.get('delivery_fee') # Vendor specifies payout
+            
+            if not agent_id or not delivery_fee:
+                return Response({'error': 'agent_id and delivery_fee required'}, status=400)
+                
+            agent = DeliveryAgentProfile.objects.get(id=agent_id)
+            
+            # Create or update assignment
+            assignment, created = DeliveryAssignment.objects.update_or_create(
+                order=order,
+                defaults={
+                    'agent': agent,
+                    'status': 'assigned',
+                    'delivery_fee': Decimal(str(delivery_fee)),
+                    'pickup_address': vendor.address,
+                    'delivery_address': order.delivery_address.full_address if order.delivery_address else "No Address",
+                    'delivery_city': order.delivery_address.city if order.delivery_address else "",
+                    'estimated_delivery_date': timezone.now().date() + timedelta(days=2)
+                }
+            )
+            
+            order.status = 'confirmed'
+            order.delivery_agent = agent
+            order.delivery_fee = Decimal(str(delivery_fee))
+            order.save()
+
+            OrderTracking.objects.create(
+                order=order,
+                status='confirmed',
+                notes=f"Delivery agent {agent.user.username} assigned by Vendor."
+            )
+            
+            return Response({'message': 'Delivery agent assigned successfully', 'assignment_id': assignment.id})
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+    
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        """Update order item status (vendor: waiting→confirmed→shipped; admin: out_for_delivery→delivered)"""
+        try:
             new_status = request.data.get('status')
             if new_status not in dict(OrderItem.VENDOR_STATUS_CHOICES):
                 return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            # Admin can update any order item
+            if request.user.role == 'admin':
+                order_item = OrderItem.objects.get(id=pk)
+            else:
+                vendor = VendorProfile.objects.get(user=request.user)
+                order_item = OrderItem.objects.get(id=pk, vendor=vendor)
+
             order_item.vendor_status = new_status
             order_item.save()
+
+            # Sync the main Order status based on the status of all items in the order
+            order = order_item.order
+            all_items = order.items.all()
+            all_statuses = [item.vendor_status for item in all_items]
             
+            old_order_status = order.status
+            
+            if all(s == 'delivered' for s in all_statuses):
+                order.status = 'delivered'
+            elif any(s == 'cancelled' for s in all_statuses) and all(s in ['cancelled', 'delivered'] for s in all_statuses):
+                # If some are cancelled and others are delivered, it's effectively delivered/completed
+                order.status = 'delivered'
+            elif any(s in ['shipped', 'out_for_delivery'] for s in all_statuses):
+                order.status = 'shipping'
+            elif any(s == 'confirmed' for s in all_statuses):
+                order.status = 'confirmed'
+            elif all(s == 'cancelled' for s in all_statuses):
+                order.status = 'cancelled'
+            else:
+                order.status = 'pending'
+                
+            order.save()
+
+            # Create tracking entry if order status changed
+            if old_order_status != order.status:
+                OrderTracking.objects.create(
+                    order=order,
+                    status=order.status,
+                    notes=f"Order status updated to {order.get_status_display()} by {request.user.role if request.user.role == 'admin' else 'Vendor'}"
+                )
+            # Create item-specific tracking if status is confirmed or shipped
+            elif new_status in ['confirmed', 'shipped']:
+                OrderTracking.objects.create(
+                    order=order,
+                    status=new_status,
+                    notes=f"Item {order_item.product_name} status updated to {new_status} by Vendor"
+                )
+
             return Response({
                 'message': 'Status updated successfully',
-                'vendor_status': order_item.vendor_status
+                'vendor_status': order_item.vendor_status,
+                'order_status': order.status
             }, status=status.HTTP_200_OK)
         except (VendorProfile.DoesNotExist, OrderItem.DoesNotExist):
             return Response({'error': 'Order item not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def admin_assign_delivery(self, request, pk=None):
+        """Admin assigns a delivery agent to an order item and sets out_for_delivery"""
+        if request.user.role != 'admin':
+            return Response({'error': 'Admin only'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            order_item = OrderItem.objects.get(id=pk)
+            agent_id = request.data.get('agent_id')
+            if not agent_id:
+                return Response({'error': 'agent_id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+            agent = DeliveryAgentProfile.objects.get(id=agent_id)
+            order = order_item.order
+            order.delivery_agent = agent
+            order.status = 'shipping'
+            order.save()
+
+            # Item status stays 'shipped' until agent accepts
+            # order_item.vendor_status = 'out_for_delivery' 
+            # order_item.save()
+
+            OrderTracking.objects.create(
+                order=order,
+                status='shipping',
+                notes=f"Delivery agent {agent.user.username} assigned by Admin. Awaiting agent acceptance."
+            )
+
+            return Response({
+                'message': f'Delivery agent {agent.user.username} assigned. Status: Out for Delivery',
+                'vendor_status': order_item.vendor_status,
+                'order_status': order.status
+            }, status=status.HTTP_200_OK)
+        except (OrderItem.DoesNotExist, DeliveryAgentProfile.DoesNotExist) as e:
+            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

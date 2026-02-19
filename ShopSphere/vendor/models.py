@@ -87,7 +87,7 @@ class VendorProfile(models.Model):
         total = OrderItem.objects.filter(
             vendor=self,
             order__status__in=['delivered', 'completed']
-        ).aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0.00')
+        ).aggregate(Sum('subtotal'))['subtotal__sum'] or Decimal('0.00')
         return total
     
     def get_pending_commission(self):
@@ -442,10 +442,9 @@ class VendorOrderSummary(models.Model):
         self.processing_orders = order_items.filter(vendor_status='processing').count()
         self.shipped_orders = order_items.filter(vendor_status='shipped').count()
         
-        # Calculate revenue
         self.total_revenue = order_items.filter(
             order__status__in=['delivered', 'completed']
-        ).aggregate(Sum('total_price'))['total_price__sum'] or Decimal('0.00')
+        ).aggregate(Sum('subtotal'))['subtotal__sum'] or Decimal('0.00')
         
         # Calculate commissions
         self.total_commission_paid = self.vendor.get_total_commission_paid()

@@ -22,6 +22,76 @@ User = get_user_model()
 # AUTHENTICATION VIEWS - VENDOR REGISTRATION AND LOGIN
 # ============================================================================
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_otp_api(request):
+    """API to send OTP via backend SMTP. Stores OTP in session server-side."""
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email is required'}, status=400)
+
+    otp = str(random.randint(100000, 999999))
+
+    # Store OTP in session (server-side, never exposed to client)
+    request.session['otp_code'] = otp
+    request.session['otp_email'] = email
+    request.session.modified = True
+
+    try:
+        send_mail(
+            subject="Your ShopSphere Verification Code",
+            message=(
+                f"Hello,\n\n"
+                f"Your OTP for ShopSphere account verification is:\n\n"
+                f"  {otp}\n\n"
+                f"This OTP is valid for 10 minutes. Do not share it with anyone.\n\n"
+                f"- ShopSphere Team"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return Response({
+            'success': True,
+            'message': f'OTP sent successfully to {email}',
+        })
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[OTP ERROR] Failed to send email to {email}: {error_msg}")
+        # Clear session OTP if email failed
+        request.session.pop('otp_code', None)
+        request.session.pop('otp_email', None)
+        return Response({'error': f'Failed to send OTP email. Please try again. ({error_msg})'}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_otp_api(request):
+    """API to verify OTP submitted by the user"""
+    submitted_otp = request.data.get('otp')
+    email = request.data.get('email')
+
+    if not submitted_otp or not email:
+        return Response({'error': 'OTP and email are required'}, status=400)
+
+    session_otp = request.session.get('otp_code')
+    session_email = request.session.get('otp_email')
+
+    if not session_otp:
+        return Response({'error': 'OTP expired or not generated. Please request a new OTP.'}, status=400)
+
+    if session_email != email:
+        return Response({'error': 'Email does not match the OTP request.'}, status=400)
+
+    if str(submitted_otp) == str(session_otp):
+        # Clear OTP from session after successful verification
+        request.session.pop('otp_code', None)
+        request.session.pop('otp_email', None)
+        return Response({'success': True, 'message': 'OTP verified successfully'})
+    else:
+        return Response({'error': 'Invalid OTP. Please try again.'}, status=400)
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -47,14 +117,7 @@ def register_view(request):
                 return Response({'error': 'Username, email, and password are required for new users'}, status=400)
             return render(request, 'register.html', {'error': 'Required fields missing'})
         
-        # Check if user already exists
-        if User.objects.filter(username=username).exists():
-            if is_json: return Response({'error': 'Username already exists'}, status=400)
-            return render(request, 'register.html', {'error': 'Username already exists'})
-            
-        if User.objects.filter(email=email).exists():
-            if is_json: return Response({'error': 'Email already exists'}, status=400)
-            return render(request, 'register.html', {'error': 'Email already exists'})
+        pass
 
     # If it's the NEW full registration flow from BankDetails.jsx (Atomic Registration)
     if is_json and data.get('bank_account_number'):
@@ -63,13 +126,31 @@ def register_view(request):
                 # Get or Create User
                 if request.user.is_authenticated:
                     user = request.user
+                    # Ensure role is vendor
+                    if user.role == 'customer':
+                        user.role = 'vendor'
+                        user.save()
                 else:
-                    user = User.objects.create_user(
-                        username=username,
-                        email=email,
-                        password=password
-                    )
-                    print(f"DEBUG: Created new user {user.email} for atomic vendor registration.")
+                    # Check for existing user by email
+                    user = User.objects.filter(email=email).first()
+                    if user:
+                        # Update existing user role
+                        if user.role == 'customer':
+                            user.role = 'vendor'
+                            user.save()
+                        # Verify or set password
+                        if password:
+                            user.set_password(password)
+                            user.save()
+                    else:
+                        # Create new user
+                        user = User.objects.create_user(
+                            username=username if username else email.split('@')[0],
+                            email=email,
+                            password=password,
+                            role='vendor'
+                        )
+                    print(f"DEBUG: Using user {user.email} for atomic vendor registration.")
 
                 # Check if they already have a vendor profile
                 if VendorProfile.objects.filter(user=user).exists():
@@ -137,13 +218,21 @@ def verify_otp_view(request):
             })
 
         if str(reg_data['otp']) == entered_otp:
-            # Create user
-            user = User.objects.create_user(
-                username=reg_data['username'],
-                email=reg_data['email'],
-                password=reg_data['password'],
-                role='vendor'
-            )
+            # Check for existing user
+            user = User.objects.filter(email=reg_data['email']).first()
+            if user:
+                # Update role if needed
+                if user.role == 'customer':
+                    user.role = 'vendor'
+                    user.save()
+            else:
+                # Create user
+                user = User.objects.create_user(
+                    username=reg_data['username'],
+                    email=reg_data['email'],
+                    password=reg_data['password'],
+                    role='vendor'
+                )
             request.session['vendor_user_id'] = user.id
             del request.session['reg_data']
             return redirect('vendor_details')
@@ -193,11 +282,14 @@ def login_view(request):
 
         # If that fails, try to find a user with that username and use their email to authenticate
         if not user:
-            try:
-                temp_user = User.objects.get(username=username_or_email)
-                user = authenticate(request, username=temp_user.email, password=password)
-            except (User.DoesNotExist, User.MultipleObjectsReturned):
-                pass
+            # Check for non-unique username matches
+            potential_users = User.objects.filter(username=username_or_email)
+            for u in potential_users:
+                # Try authenticating with each user's email
+                authenticated_user = authenticate(request, username=u.email, password=password)
+                if authenticated_user:
+                    user = authenticated_user
+                    break
 
         if user:
             login(request, user)

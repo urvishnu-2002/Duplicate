@@ -1,18 +1,24 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .api_views import (
-    VendorRequestViewSet, VendorManagementViewSet, ProductManagementViewSet, DashboardView
+    AdminAuthViewSet, AdminDashboardViewSet, AdminUserViewSet, 
+    AdminVendorViewSet, AdminReportViewSet, AdminDeliveryViewSet,
+    AdminProductViewSet, AdminSystemConfigViewSet, VendorRequestViewSet,
+    AdminOrderViewSet
 )
 
 router = DefaultRouter()
-router.register(r'vendor-requests', VendorRequestViewSet, basename='vendor_request')
-router.register(r'vendors', VendorManagementViewSet, basename='vendor_management')
-router.register(r'products', ProductManagementViewSet, basename='product_management')
+router.register(r'auth', AdminAuthViewSet, basename='admin-auth')
+router.register(r'dashboard', AdminDashboardViewSet, basename='admin-dashboard')
+router.register(r'users', AdminUserViewSet, basename='admin-users')
+router.register(r'vendors', AdminVendorViewSet, basename='admin-vendors')
+router.register(r'vendor-requests', VendorRequestViewSet, basename='admin-vendor-requests')
+router.register(r'products', AdminProductViewSet, basename='admin-products')
+router.register(r'delivery-agents', AdminDeliveryViewSet, basename='admin-delivery')
+router.register(r'reports', AdminReportViewSet, basename='admin-reports')
+router.register(r'settings', AdminSystemConfigViewSet, basename='admin-settings')
+router.register(r'orders', AdminOrderViewSet, basename='admin-orders')
 
 urlpatterns = [
-    # Dashboard
-    path('dashboard/', DashboardView.as_view(), name='admin_dashboard_api'),
-    
-    # Router endpoints
     path('', include(router.urls)),
 ]
