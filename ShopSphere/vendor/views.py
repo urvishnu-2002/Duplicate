@@ -245,24 +245,33 @@ def vendor_details_view(request):
         id_proof_file = request.FILES.get('id_proof_file')
         pan_card_file = request.FILES.get('pan_card_file')
 
-        VendorProfile.objects.create(
+        defaults = {
+            'shop_name': request.POST.get('shop_name'),
+            'shop_description': request.POST.get('shop_description'),
+            'address': request.POST.get('address'),
+            'business_type': request.POST.get('business_type'),
+            'id_type': request.POST.get('id_type'),
+            'id_number': request.POST.get('id_number'),
+            'approval_status': 'pending'
+        }
+
+        if id_proof_file:
+            defaults.update({
+                'id_proof_data': id_proof_file.read(),
+                'id_proof_name': id_proof_file.name,
+                'id_proof_mimetype': id_proof_file.content_type,
+            })
+
+        if pan_card_file:
+            defaults.update({
+                'pan_card_data': pan_card_file.read(),
+                'pan_card_name': pan_card_file.name,
+                'pan_card_mimetype': pan_card_file.content_type,
+            })
+
+        VendorProfile.objects.update_or_create(
             user=user,
-            shop_name=request.POST.get('shop_name'),
-            shop_description=request.POST.get('shop_description'),
-            address=request.POST.get('address'),
-            business_type=request.POST.get('business_type'),
-            id_type=request.POST.get('id_type'),
-            id_number=request.POST.get('id_number'),
-            
-            id_proof_data=id_proof_file.read() if id_proof_file else None,
-            id_proof_name=id_proof_file.name if id_proof_file else None,
-            id_proof_mimetype=id_proof_file.content_type if id_proof_file else None,
-
-            pan_card_data=pan_card_file.read() if pan_card_file else None,
-            pan_card_name=pan_card_file.name if pan_card_file else None,
-            pan_card_mimetype=pan_card_file.content_type if pan_card_file else None,
-
-            approval_status='pending'  # Status defaults to pending
+            defaults=defaults
         )
         if 'vendor_user_id' in request.session:
             del request.session['vendor_user_id']

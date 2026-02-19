@@ -140,7 +140,7 @@
                     <td>{{ item.product.name }}</td>
                     <td>${{ item.product.price }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>${{ item.total_price }}</td>
+                    <td>${{ item.get_total }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

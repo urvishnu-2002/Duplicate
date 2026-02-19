@@ -115,21 +115,21 @@
         {% for order in orders %}
         <div class="order-card">
             <div class="order-header">
-                <span class="order-id">Order #{{ order.id }}</span>
-                <span>{{ order.order_date|date:"F j, Y, P" }}</span>
+                <span class="order-id">Order #{{ order.order_number }}</span>
+                <span>{{ order.created_at|date:"F j, Y, P" }}</span>
             </div>
             <div class="order-items">
                 <ul>
                     {% for item in order.items.all %}
                     <li>
                         <span class="item-name">{{ item.quantity }}x {{ item.product_name }}</span>
-                        <span class="item-price">${{ item.price }}</span>
+                        <span class="item-price">${{ item.product_price }}</span>
                     </li>
                     {% endfor %}
                 </ul>
             </div>
             <div class="payment-info">
-                Paid via {{ order.payment_mode }}
+                Paid via {{ order.payment_method }}
             </div>
         </div>
         {% endfor %}

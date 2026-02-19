@@ -9,15 +9,39 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuthUser
         fields = ['username', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'username': {'validators': []},  # Disable unique validation for username as it's not unique in model
+        }
 
     def create(self, validated_data):
         user = AuthUser.objects.create_user(**validated_data)
         return user
 
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'uploaded_at']
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+    vendor_name = serializers.CharField(source='vendor.shop_name', read_only=True)
+    vendor_id = serializers.IntegerField(source='vendor.id', read_only=True)
+    
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'name', 'description', 'category', 'price', 
+            'quantity', 'images', 'status', 'is_blocked', 'created_at',
+            'vendor_name', 'vendor_id'
+        ]
+
+
 class AddressSerializer(serializers.ModelSerializer):
     address = serializers.CharField(required=False)
-
+    
     class Meta:
         model = Address
         exclude = ['user']
@@ -36,22 +60,6 @@ class AddressSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data['address'] = instance.address_line1
         return data
-
-from vendor.models import Product as VendorProduct, ProductImage
-
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = ['id', 'image', 'uploaded_at']
-
-class ProductSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, read_only=True)
-    class Meta:
-        model = VendorProduct
-        fields = [
-            'id', 'name', 'description', 'category', 'price', 
-            'quantity', 'images', 'status', 'is_blocked', 'created_at'
-        ]
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

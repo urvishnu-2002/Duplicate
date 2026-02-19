@@ -14,6 +14,7 @@ class AuthUser(AbstractUser):
         ('customer', 'Customer'),
         ('vendor', 'Vendor'),
         ('delivery', 'Delivery Agent'),
+        ('admin', 'Admin'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
     
@@ -30,6 +31,11 @@ class AuthUser(AbstractUser):
 
     def __str__(self):
         return f"{self.email} - {self.role}"
+
+    def save(self, *args, **kwargs):
+        if (self.is_staff or self.is_superuser) and self.role == 'customer':
+            self.role = 'admin'
+        super().save(*args, **kwargs)
 
     def is_account_active(self):
         """Check if account is truly active (not blocked/suspended)"""
@@ -128,6 +134,10 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.city}, {self.state}"
+    
+    @property
+    def full_address(self):
+        return f"{self.address_line1}, {self.address_line2}, {self.city}, {self.state} - {self.pincode}"
 
 
 class Order(models.Model):
@@ -168,6 +178,7 @@ class Order(models.Model):
     
     # Tracking
     delivery_agent = models.ForeignKey('deliveryAgent.DeliveryProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tracked_location = models.CharField(max_length=255, blank=True)
     
     # Timestamps
@@ -207,12 +218,14 @@ class OrderItem(models.Model):
     
     # Vendor order status (separate from main order status)
     VENDOR_STATUS_CHOICES = [
-        ('received', 'Received'),
-        ('processing', 'Processing'),
+        ('waiting', 'Waiting'),
+        ('confirmed', 'Order Confirmed'),
         ('shipped', 'Shipped'),
+        ('out_for_delivery', 'Out for Delivery'),
+        ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
     ]
-    vendor_status = models.CharField(max_length=20, choices=VENDOR_STATUS_CHOICES, default='received')
+    vendor_status = models.CharField(max_length=20, choices=VENDOR_STATUS_CHOICES, default='waiting')
 
     class Meta:
         ordering = ['-order__created_at']
@@ -658,11 +671,12 @@ class CouponUsage(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.coupon.code}"
-    
+
 
 class Review(models.Model):
     user = models.ForeignKey(AuthUser, on_delete=models.CASCADE)
     Product = models.ForeignKey('vendor.Product', on_delete=models.CASCADE)
+    reviewer_name = models.CharField(max_length=100, blank=True, null=True)
     rating = models.IntegerField()
     comment = models.TextField()
     pictures = models.ImageField(upload_to='review_pics/', null=True, blank=True)
@@ -671,3 +685,18 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review by {self.user.username} for {self.Product.name}"
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=AuthUser)
+def create_user_wallet(sender, instance, created, **kwargs):
+    """Automatically create a wallet for every new user"""
+    if created:
+        UserWallet.objects.get_or_create(user=instance)
+
+@receiver(post_save, sender=AuthUser)
+def save_user_wallet(sender, instance, **kwargs):
+    """Ensure wallet is saved when user is saved"""
+    if hasattr(instance, 'wallet'):
+        instance.wallet.save()
