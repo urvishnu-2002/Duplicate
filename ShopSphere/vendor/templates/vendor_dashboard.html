@@ -499,6 +499,47 @@
         </div>
     </div>
 
+    <div id="reviews" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Customer Reviews</h2>
+    </div>
+
+    {% if reviews %}
+    <div style="display: grid; gap: 20px;">
+        {% for review in reviews %}
+        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                <div>
+                    <h4 style="margin-bottom: 5px; color: var(--primary-color);">{{ review.Product.name }}</h4>
+                    <div style="color: #636e72; font-size: 14px;">
+                        {% with rev=review.reviewer_name|default:review.user.username %}
+                        {% with dt=review.created_at|date:"F d, Y" %}
+                        By: <strong>{{ rev }}</strong> on {{ dt }}
+                        {% endwith %}
+                        {% endwith %}
+                    </div>
+                </div>
+                <div style="color: #FFD700; font-size: 18px;">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <p style="color: #2d3436; line-height: 1.6;">{{ review.comment }}</p>
+            {% if review.pictures %}
+            <div style="margin-top: 15px;">
+                <img src="{{ review.pictures.url }}" alt="Review Image" style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 50px; background: white; border-radius: 12px;">
+        <p>No reviews yet for your products.</p>
+    </div>
+    {% endif %}
+</div>
     <script>
         // Tab switching logic
         function showTab(tabId, element) {

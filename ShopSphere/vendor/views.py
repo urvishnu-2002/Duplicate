@@ -634,3 +634,20 @@ def view_product_view(request, product_id):
     }
 
     return render(request, 'product_detail.html', context)
+
+@login_required(login_url='login')
+def vendor_home_view(request):
+    # ... existing logic to get vendor and products ...
+    products = vendor.products.all()
+
+    # Fetch reviews for all vendor products
+    vendor_reviews = Review.objects.filter(Product__in=products).order_by('-created_at')
+
+    context = {
+        'vendor': vendor,
+        'products': products,
+        'reviews': vendor_reviews,  # Pass reviews to the template
+        # ... other context items ...
+    }
+    return render(request, 'vendor_dashboard.html', context)
+
