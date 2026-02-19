@@ -1,19 +1,132 @@
+VISHNUVARDHAN REDDY
+urvishnu
+Online
+
+Mahalakshmi — 11-02-2026 12:06
+Hello vishnu
+From first day  to till now task list endulo pettali
+VISHNUVARDHAN REDDY — 12-02-2026 08:55
+Hello
+Please send here
+Mahalakshmi — 12-02-2026 09:04
+Ok
+What is the work for me today
+VISHNUVARDHAN REDDY — 12-02-2026 09:07
+forward the tasks till now you have completed
+Mahalakshmi — 12-02-2026 09:15
+Image
+VISHNUVARDHAN REDDY — 12-02-2026 09:36
+copy,  noted
+VISHNUVARDHAN REDDY — 12-02-2026 15:38
+Hello Mahalakshmi
+Are you there
+Mahalakshmi — 12-02-2026 16:17
+Ha vishnu
+What happen
+VISHNUVARDHAN REDDY — 12-02-2026 16:40
+Ntg
+Integration lo errors ochai kadha
+vati status entii ani chesa
+Mahalakshmi — 12-02-2026 16:46
+Integration ayyindi kani adi login error backend lo ochindi adi ela cheyyanu nenu frontend lo chesa kada integration
+Ippudu latest code ekkadundi vishnu
+VISHNUVARDHAN REDDY — 12-02-2026 16:53
+evo konni errors osthunnai 
+check chesthunnam
+Me and Nandini
+Mahalakshmi — 12-02-2026 17:09
+Ok vishnu
+VISHNUVARDHAN REDDY — 12-02-2026 17:09
+ha
+Mahalakshmi — Yesterday at 22:00
+Hello
+Vishnu nenu main lo chesa kada
+VISHNUVARDHAN REDDY — Yesterday at 22:00
+hello
+Mahalakshmi — Yesterday at 22:00
+Vere folder lo ela cheyyali
+VISHNUVARDHAN REDDY — Yesterday at 22:01
+haan
+VISHNUVARDHAN REDDY — Yesterday at 22:01
+adhi ela cheppali ippudu
+Mahalakshmi — Yesterday at 22:01
+Ela
+VISHNUVARDHAN REDDY — Yesterday at 22:02
+tmrw chudkundham kadha , nak idea ledhu
+balaji vallani adagali
+Mahalakshmi — Yesterday at 22:03
+Oka pani cheddama nuvvu elago nenu branch loki push chesaka nuvvu copy chesi main lo pedthav ka alage nenu copy chesi niku send chestha avi past chesthava
+Avthada
+VISHNUVARDHAN REDDY — Yesterday at 22:04
+ha done
+ikkade send chey
+Mahalakshmi — Yesterday at 22:04
+Okk
+Mahalakshmi — Yesterday at 22:13
+settings file
+"""
+Django settings for ShopSphere project.
+"""
+
+from pathlib import Path
+from datetime import timedelta
+
+message.txt
+5 KB
+urls file
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Authentication
+    path('user_login', views.login_api, name='user_login'),
+    path('register', views.register_api, name='register'),
+    path('logout', views.logout_api, name='logout'),
+
+    # Shop / Product
+
+    path('', views.get_product, name='user_products'),
+
+    # Cart
+    path('cart', views.cart_view, name='cart'),
+    path('add_to_cart/<int:product_id>', views.add_to_cart, name='add_to_cart'),
+    path('remove_from_cart/<int:product_id>', views.remove_from_cart, name='remove_from_cart'),
+    path('update_cart_quantity/<int:product_id>', views.update_cart_quantity, name='update_cart_quantity'),
+
+
+    path('checkout', views.checkout_view, name='checkout'),
+    path('process_payment', views.process_payment, name='process_payment'),
+
+    # User Profile / Orders
+    path('my_orders', views.my_orders, name='my_orders'),
+    path('address', views.address_page, name="address_page"),
+    path('delete-address/<int:id>', views.delete_address, name="delete_address"),
+
+    # #Reviews
+    # '''path('my_reviews', views.user_reviews, name='user_reviews'),
+    # path('submit_review/<int:product_id>', views.submit_review, name='submit_review'),
+    # path('delete_review/<int:review_id>', views.delete_review, name='delete_review'),
+    # path('edit_review/<int:review_id>', views.edit_review, name='edit_review'),'''
+    # path('review_product/<int:product_id>', views.review_product, name='review_product')
+]
+views file
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect, get_object_or_404
-from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from decimal import Decimal
 
-from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address, Review, OrderReturn, Refund
+from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address, Review
 from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer, AddressSerializer
 from .forms import AddressForm
 import uuid
 from django.db import transaction
 from vendor.models import Product
+from rest_framework.decorators import authentication_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
@@ -42,20 +155,21 @@ def login_api(request):
     username_or_email = request.data.get('email') or request.data.get('username')
     password = request.data.get('password')
 
-    # If multiple users have the same email/username, we need to find the one with the correct password.
-    # The default authenticate() might fail or return MultipleObjectsReturned if email/username is non-unique.
-    users = AuthUser.objects.filter(email=username_or_email) if '@' in (username_or_email or '') else AuthUser.objects.filter(username=username_or_email)
-    
-    user = None
-    for u in users:
-        if u.check_password(password):
-            user = u
-            break
+    auth_identifier = username_or_email
+    # If user provided a username instead of an email, resolve to the underlying email
+    # because USERNAME_FIELD is 'email' in our AuthUser model.
+    if username_or_email and '@' not in username_or_email:
+        try:
+            u = AuthUser.objects.get(username=username_or_email)
+            auth_identifier = u.email
+        except AuthUser.DoesNotExist:
+            auth_identifier = None
+
+    user = authenticate(username=auth_identifier, password=password)
 
     if user:
         login(request, user)
         refresh = RefreshToken.for_user(user)
-        refresh['role'] = user.role
         
         if request.accepted_renderer.format == 'json':
             return Response({
@@ -72,36 +186,12 @@ def login_api(request):
 
 # 🔹 HOME (Product Page)
 @api_view(['GET'])
-#permission_classes([IsAuthenticated])
-def home_api(request):
-    # Only show active and unblocked products to customers
-    products = Product.objects.filter(is_blocked=False, status='active')
-    
-    if request.accepted_renderer.format == 'json':
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
-    
-    cart_count = 0
-    if request.user.is_authenticated:
-        try:
-            cart = Cart.objects.get(user=request.user)
-            cart_count = sum(item.quantity for item in cart.items.all())
-        except Cart.DoesNotExist:
-            pass
-            
-    return render(request, "product_list.html", {
-        "products": products, 
-        "cart_count": cart_count,
-        "user": request.user
-    })
-
-@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_product(request):
-    # Only show active and unblocked products to customers
-    products = Product.objects.filter(is_blocked=False, status='active')
+    products = Product.objects.all()
     
     if request.accepted_renderer.format == 'json':
-        serializer = ProductSerializer(products, many=True)
+        serializer = ProductSerializer(products, many=True, context={'request': request})
         return Response(serializer.data)
 
     cart_count = 0
@@ -119,6 +209,133 @@ def get_product(request):
     })
 
 @api_view(['GET', 'POST'])
+@authentication_classes([JWTAuthentication])
+... (273 lines left)
+
+message.txt
+15 KB
+VISHNUVARDHAN REDDY — Yesterday at 22:16
+a folder lo a file update cheyyalo kuda cheppava
+Mahalakshmi — Yesterday at 22:17
+user backend
+VISHNUVARDHAN REDDY — Yesterday at 22:18
+dhantlo sub folders kuda cheppara 
+prathi sub folder lo untai e files
+Mahalakshmi — Yesterday at 22:19
+3 files e  view,urls for user
+settings okate kada
+VISHNUVARDHAN REDDY — Yesterday at 22:19
+ok
+Mahalakshmi — Yesterday at 22:20
+frontend push chesa vendordashboard ani untadi
+add to cart integration
+VISHNUVARDHAN REDDY — Yesterday at 22:21
+ok ma
+Mahalakshmi — Yesterday at 22:21
+haa
+﻿
+Mahalakshmi
+mahalakshmi08928
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from decimal import Decimal
+
+from .models import AuthUser, Cart, CartItem, Order, OrderItem, Address, Review
+from .serializers import RegisterSerializer, ProductSerializer, CartSerializer, OrderSerializer, AddressSerializer
+from .forms import AddressForm
+import uuid
+from django.db import transaction
+from vendor.models import Product
+from rest_framework.decorators import authentication_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def register_api(request):
+    if request.method == 'GET':
+        return render(request, "user_register.html")
+    
+    serializer = RegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        if request.accepted_renderer.format == 'json':
+            return Response({"message": "User registered successfully"}, status=201)
+        return redirect('user_login')
+
+    if request.accepted_renderer.format == 'json':
+        return Response(serializer.errors, status=400)
+    return render(request, "user_register.html", {"error": serializer.errors})
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def login_api(request):
+    if request.method == 'GET':
+        return render(request, "user_login.html")
+    
+    # support both JSON API clients (username/email) and HTML form
+    username_or_email = request.data.get('email') or request.data.get('username')
+    password = request.data.get('password')
+
+    auth_identifier = username_or_email
+    # If user provided a username instead of an email, resolve to the underlying email
+    # because USERNAME_FIELD is 'email' in our AuthUser model.
+    if username_or_email and '@' not in username_or_email:
+        try:
+            u = AuthUser.objects.get(username=username_or_email)
+            auth_identifier = u.email
+        except AuthUser.DoesNotExist:
+            auth_identifier = None
+
+    user = authenticate(username=auth_identifier, password=password)
+
+    if user:
+        login(request, user)
+        refresh = RefreshToken.for_user(user)
+        
+        if request.accepted_renderer.format == 'json':
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "username": user.username,
+                "role": user.role
+            })
+        else:
+            return redirect('user_products')
+
+    return Response({"error": "Invalid credentials"}, status=401)
+
+
+# 🔹 HOME (Product Page)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_product(request):
+    products = Product.objects.all()
+    
+    if request.accepted_renderer.format == 'json':
+        serializer = ProductSerializer(products, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    cart_count = 0
+    if request.user.is_authenticated:
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart_count = sum(item.quantity for item in cart.items.all())
+        except Cart.DoesNotExist:
+            pass
+            
+    return render(request, "product_list.html", {
+        "products": products, 
+        "cart_count": cart_count,
+        "user": request.user
+    })
+
+@api_view(['GET', 'POST'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -139,13 +356,14 @@ def add_to_cart(request, product_id):
     return redirect('cart')
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cart_view(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = cart.items.all()
     
     if request.accepted_renderer.format == 'json':
-        serializer = CartSerializer(cart)
+        serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
         
     total_price = sum(item.get_total() for item in cart_items)
@@ -155,8 +373,46 @@ def cart_view(request):
         "total_cart_price": total_price
     })
 
-@api_view(['GET'])
+@api_view(['POST', 'DELETE'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
+def remove_from_cart(request, product_id):
+    cart = get_object_or_404(Cart, user=request.user)
+    cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
+    cart_item.delete()
+    
+    if request.accepted_renderer.format == 'json':
+        return Response({
+            "message": "Product removed from cart",
+            "cart_count": sum(item.quantity for item in cart.items.all())
+        })
+    return redirect('cart')
+
+@api_view(['POST', 'PATCH'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def update_cart_quantity(request, product_id):
+    action = request.data.get('action') # 'increase' or 'decrease'
+    cart = get_object_or_404(Cart, user=request.user)
+    cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
+    
+    if action == 'increase':
+        cart_item.quantity += 1
+    elif action == 'decrease':
+        if cart_item.quantity > 1:
+            cart_item.quantity -= 1
+        else:
+            cart_item.delete()
+            return Response({"message": "Item removed from cart", "cart_count": sum(item.quantity for item in cart.items.all())})
+    
+    cart_item.save()
+    
+    return Response({
+        "message": "Quantity updated",
+        "quantity": cart_item.quantity,
+        "cart_count": sum(item.quantity for item in cart.items.all())
+    })
+
 def checkout_view(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = cart.items.all()
@@ -182,6 +438,7 @@ def checkout_view(request):
     })
 
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def process_payment(request):
     payment_mode = request.data.get('payment_mode')
@@ -214,18 +471,12 @@ def process_payment(request):
                 for item_data in items_from_request:
                     price = Decimal(str(item_data.get('price', 0)))
                     quantity = int(item_data.get('quantity', 1))
-                    product_id = item_data.get('id') or item_data.get('product_id')
-                    product = Product.objects.filter(id=product_id).first()
-                    
                     OrderItem.objects.create(
                         order=order,
-                        product=product,
-                        vendor=product.vendor if product else None,
-                        product_name=item_data.get('name') or (product.name if product else "Unknown Product"),
+                        product_name=item_data.get('name'),
                         quantity=quantity,
                         product_price=price,
-                        subtotal=price * quantity,
-                        vendor_status='waiting'
+                        subtotal=price * quantity
                     )
                 Cart.objects.filter(user=request.user).delete()
 
@@ -251,12 +502,10 @@ def process_payment(request):
                     OrderItem.objects.create(
                         order=order,
                         product=item.product,
-                        vendor=item.product.vendor,
                         product_name=item.product.name,
                         quantity=item.quantity,
                         product_price=item.product.price,
-                        subtotal=item.get_total(),
-                        vendor_status='waiting'
+                        subtotal=item.get_total()
                     )
                 cart.items.all().delete()
 
@@ -276,6 +525,7 @@ def process_payment(request):
     return redirect('my_orders')
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def my_orders(request):
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
@@ -287,6 +537,7 @@ def my_orders(request):
     return render(request, "my_orders.html", {"orders": orders})
 
 @api_view(['GET', 'POST'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def address_page(request):
     if request.method == 'POST':
@@ -319,6 +570,7 @@ def address_page(request):
     return render(request, "address.html", {"addresses": addresses, "form": form})
 
 @api_view(['POST', 'GET', 'DELETE'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def delete_address(request, id):
     address = get_object_or_404(Address, id=id, user=request.user)
@@ -334,74 +586,6 @@ def delete_address(request, id):
 def logout_api(request):
     logout(request)
     return redirect('user_login')
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_user_info(request):
-    user = request.user
-    data = {
-        "username": user.username,
-        "email": user.email,
-        "role": user.role,
-        "is_vendor": hasattr(user, 'vendor_profile'),
-    }
-    if data["is_vendor"]:
-        vendor = user.vendor_profile
-        data["vendor_status"] = vendor.approval_status
-        data["is_approved_vendor"] = vendor.approval_status == 'approved'
-    return Response(data)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def request_return_api(request, order_item_id):
-    """Customer requests a return for a specific order item"""
-    try:
-        order_item = OrderItem.objects.get(id=order_item_id, order__user=request.user)
-        
-        if order_item.order.status != 'delivered':
-            return Response({'error': 'Order not yet delivered'}, status=400)
-            
-        reason = request.data.get('reason')
-        description = request.data.get('description', '')
-        
-        if not reason:
-            return Response({'error': 'Reason for return required'}, status=400)
-            
-        # Check if already requested
-        if hasattr(order_item, 'order_return'):
-            return Response({'error': 'Return already requested for this item'}, status=400)
-            
-        return_req = OrderReturn.objects.create(
-            order=order_item.order,
-            order_item=order_item,
-            user=request.user,
-            reason=reason,
-            description=description,
-            status='requested'
-        )
-        
-        return Response({'message': 'Return request submitted', 'id': return_req.id})
-    except OrderItem.DoesNotExist:
-        return Response({'error': 'Order item not found'}, status=404)
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def my_returns(request):
-    """List customer return requests"""
-    returns = OrderReturn.objects.filter(user=request.user).order_by('-created_at')
-    data = []
-    for r in returns:
-        data.append({
-            'id': r.id,
-            'order_number': r.order.order_number,
-            'product': r.order_item.product_name,
-            'reason': r.get_reason_display(),
-            'status': r.get_status_display(),
-            'created_at': r.created_at
-        })
-    return Response(data)
 
 @login_required
 def review_product(request, product_id):
@@ -420,73 +604,8 @@ def review_product(request, product_id):
             return redirect('home')
         return render(request, 'review.html', {'product': product, 'error': 'Please provide a valid rating between 1 and 5.'})
     return render(request, 'review.html', {'product': product})
-@api_view(['GET', 'POST'])
-def product_detail(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    user_review = None
-    can_edit_review = False
-    days_left = 0
-    
-    if request.user.is_authenticated:
-        user_review = Review.objects.filter(user=request.user, Product=product).first()
-        if user_review:
-            # Check 5-day window
-            time_diff = timezone.now() - user_review.created_at
-            if time_diff.days < 5:
-                can_edit_review = True
-                days_left = 5 - time_diff.days
-    
-    if request.method == 'POST':
-        reviewer_name = request.data.get('reviewer_name')
-        rating = request.data.get('rating')
-        comment = request.data.get('comment')
-        pictures = request.FILES.get('pictures')
-        
-        if rating:
-            if user_review:
-                # Update existing review
-                if can_edit_review:
-                    user_review.reviewer_name = reviewer_name
-                    user_review.rating = int(rating)
-                    user_review.comment = comment
-                    if pictures:
-                        user_review.pictures = pictures
-                    user_review.save()
-            else:
-                # Create new review
-                Review.objects.create(
-                    user=request.user if request.user.is_authenticated else None,
-                    Product=product,
-                    reviewer_name=reviewer_name,
-                    rating=int(rating),
-                    comment=comment,
-                    pictures=pictures
-                )
-            
-            if request.accepted_renderer.format == 'json':
-                return Response({"message": "Review processed successfully"}, status=200)
-            return redirect('user_product_detail', product_id=product.id)
-    
-    reviews = Review.objects.filter(Product=product).order_by('-created_at')
-    
-    if request.accepted_renderer.format == 'json':
-        # Simple serialization for reviews
-        reviews_data = [{
-            'reviewer_name': r.reviewer_name,
-            'rating': r.rating,
-            'comment': r.comment,
-            'created_at': r.created_at
-        } for r in reviews]
-        return Response({
-            "product": ProductSerializer(product).data,
-            "reviews": reviews_data
-        })
-        
-    return render(request, "user_product_detail.html", {
-        "product": product,
-        "reviews": reviews,
-        "user": request.user,
-        "user_review": user_review,
-        "can_edit_review": can_edit_review,
-        "days_left": days_left
-    })
+
+# @login_required
+# def user_reviews(request):
+#     reviews = Review.objects.filter(user=request.user)
+#     return render(request, 'user_reviews.html', {'reviews': reviews})

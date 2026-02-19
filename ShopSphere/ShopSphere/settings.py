@@ -150,9 +150,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 # Redirect URLs
-LOGIN_URL = 'login' # Matches the name in user.urls
+LOGIN_URL = 'user_login' # Matches the name in user.urls
 LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'login'
+LOGOUT_REDIRECT_URL = 'user_login'
 
 # Disable automatic trailing slash append if needed (User had it False previously)
 APPEND_SLASH = False

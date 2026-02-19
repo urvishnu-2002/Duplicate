@@ -8,7 +8,7 @@ class VendorConfig(AppConfig):
         """Initialize default categories when app is ready"""
         # Commented out to avoid RuntimeWarning: Accessing the database during app initialization is discouraged.
         # Queries in ready() or when app modules are imported should be avoided.
-        """
+        
         try:
             from vendor.models import Category, Product
             
@@ -36,5 +36,3 @@ class VendorConfig(AppConfig):
         except Exception as e:
             # Silently fail if tables don't exist yet (during migrations)
             pass
-        """
-        pass
